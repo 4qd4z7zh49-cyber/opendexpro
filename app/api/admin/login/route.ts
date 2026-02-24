@@ -15,6 +15,15 @@ type VerifyLoginRpcResult = {
   error: { message: string } | null;
 };
 
+function normalizeRole(value: unknown) {
+  const role = String(value || "")
+    .trim()
+    .toLowerCase();
+  if (role === "super-admin" || role === "super_admin") return "superadmin";
+  if (role === "subadmin" || role === "sub_admin") return "sub-admin";
+  return role;
+}
+
 function getSupabaseAdminClient() {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -156,14 +165,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Username/Password မမှန်ပါ" }, { status: 401 });
     }
 
-    const dashboardPath =
-      row.role === "sub-admin" || row.role === "subadmin"
-        ? "/subadmin"
-        : "/admin";
+    const normalizedRole = normalizeRole(row.role);
+    const dashboardPath = normalizedRole === "sub-admin" ? "/subadmin" : "/admin";
 
     const res = NextResponse.json({
       ok: true,
-      role: row.role,
+      role: normalizedRole,
       username: row.username,
       id: row.id,
       redirect: dashboardPath,
@@ -178,7 +185,7 @@ export async function POST(req: Request) {
     };
 
     res.cookies.set("admin_session", "active", cookieOpts);
-    res.cookies.set("admin_role", String(row.role || ""), cookieOpts);
+    res.cookies.set("admin_role", normalizedRole, cookieOpts);
     res.cookies.set("admin_id", String(row.id), cookieOpts); // ✅ IMPORTANT
 
     return res;

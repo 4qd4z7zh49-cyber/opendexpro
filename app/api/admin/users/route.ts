@@ -5,6 +5,15 @@ import { getUserAccessForUsers } from "@/lib/userAccessStore";
 
 export const dynamic = "force-dynamic";
 
+function normalizeRole(value: unknown) {
+  const role = String(value || "")
+    .trim()
+    .toLowerCase();
+  if (role === "super-admin" || role === "super_admin") return "superadmin";
+  if (role === "subadmin" || role === "sub_admin") return "sub-admin";
+  return role;
+}
+
 function getSupabaseAdminClient() {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -35,7 +44,7 @@ export async function GET(req: Request) {
   };
 
   const session = getCookie("admin_session");
-  const role = getCookie("admin_role");
+  const role = normalizeRole(getCookie("admin_role"));
   const adminId = getCookie("admin_id");
   const url = new URL(req.url);
   const managedByRaw = String(url.searchParams.get("managedBy") || "").trim();
@@ -49,7 +58,7 @@ export async function GET(req: Request) {
     .select("id, username, email, phone, created_at, managed_by")
     .order("created_at", { ascending: false });
 
-  if (role === "sub-admin" || role === "subadmin") {
+  if (role === "sub-admin") {
     q = q.eq("managed_by", adminId);
   } else {
     const managedByUpper = managedByRaw.toUpperCase();

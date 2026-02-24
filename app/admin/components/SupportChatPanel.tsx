@@ -521,6 +521,14 @@ export default function SupportChatPanel() {
             {usersErr ? <div className="mt-2 text-xs text-red-300">{usersErr}</div> : null}
           </div>
 
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => void onPhotoChanged(e.target.files?.[0])}
+          />
+
           {activeThread ? (
             <>
               <div className="mb-3 flex flex-wrap items-start justify-between gap-3 border-b border-white/10 pb-3">
@@ -651,14 +659,6 @@ export default function SupportChatPanel() {
                 ) : null}
               </div>
 
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => void onPhotoChanged(e.target.files?.[0])}
-              />
-
               {pickedImageDataUrl ? (
                 <div className="mt-3 rounded-xl border border-white/10 bg-black/30 p-3">
                   <div className="mb-2 text-xs text-white/60">{pickedImageName || text.selectedPhoto}</div>
@@ -715,8 +715,65 @@ export default function SupportChatPanel() {
               </div>
             </>
           ) : (
-            <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-4 text-sm text-white/70">
-              {text.noOpenedThread}
+            <div className="space-y-3">
+              <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-4 text-sm text-white/70">
+                {text.noOpenedThread}
+              </div>
+
+              {pickedImageDataUrl ? (
+                <div className="rounded-xl border border-white/10 bg-black/30 p-3">
+                  <div className="mb-2 text-xs text-white/60">{pickedImageName || text.selectedPhoto}</div>
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={pickedImageDataUrl}
+                      alt="preview"
+                      className="max-h-40 rounded-lg border border-white/10 object-contain"
+                    />
+                  </>
+                  <button
+                    type="button"
+                    onClick={clearPhoto}
+                    className="mt-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/80"
+                  >
+                    {text.removePhoto}
+                  </button>
+                </div>
+              ) : null}
+
+              <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                <textarea
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  rows={3}
+                  placeholder={text.replyPlaceholder}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      if (!sendLoading) void onSend();
+                    }
+                  }}
+                  className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none"
+                />
+                {sendErr ? <div className="mt-2 text-sm text-red-300">{sendErr}</div> : null}
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={onPickPhoto}
+                    className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/90 hover:bg-white/10"
+                  >
+                    {text.addPhoto}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={sendLoading || (!draft.trim() && !pickedImageDataUrl)}
+                    onClick={() => void onSend()}
+                    className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+                  >
+                    {sendLoading ? text.sending : text.sendReply}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>

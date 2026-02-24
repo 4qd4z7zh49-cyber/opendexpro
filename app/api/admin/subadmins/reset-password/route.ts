@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdminSession, supabaseAdmin } from "../../_helpers";
+import { isSuperadminRole, requireAdminSession, supabaseAdmin } from "../../_helpers";
 
 const MIN_PASSWORD_LENGTH = 8;
 const MAX_PASSWORD_LENGTH = 72;
@@ -8,10 +8,6 @@ type ResetResult = {
   ok?: boolean;
   message?: string;
 };
-
-function isSuperadminRole(role: string) {
-  return role.trim().toLowerCase() === "superadmin";
-}
 
 function normalizeRpcResult(data: unknown): ResetResult | null {
   if (Array.isArray(data)) {

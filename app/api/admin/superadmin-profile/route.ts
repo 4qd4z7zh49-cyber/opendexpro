@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdminSession, supabaseAdmin } from "../_helpers";
+import { isSuperadminRole, requireAdminSession, supabaseAdmin } from "../_helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -14,16 +14,6 @@ type AdminProfileRow = {
   invitation_code: string | null;
   created_at: string | null;
 };
-
-function normalizeRole(value: unknown) {
-  return String(value || "")
-    .trim()
-    .toLowerCase();
-}
-
-function isSuperadminRole(value: unknown) {
-  return normalizeRole(value) === "superadmin";
-}
 
 function generateInviteCode() {
   let suffix = "";

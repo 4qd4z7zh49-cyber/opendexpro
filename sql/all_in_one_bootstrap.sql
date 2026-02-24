@@ -162,6 +162,108 @@ create index if not exists idx_profiles_managed_by on public.profiles(managed_by
 create index if not exists idx_profiles_email_lower on public.profiles(lower(email));
 create index if not exists idx_profiles_invitation_code on public.profiles(invitation_code);
 
+-- Keep public.profiles in sync when a new auth user is created.
+create or replace function public.sync_profile_from_auth_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, auth, extensions
+as $$
+declare
+  v_meta jsonb := coalesce(new.raw_user_meta_data, '{}'::jsonb);
+  v_username text;
+  v_phone text;
+  v_country text;
+  v_invitation_code text;
+  v_managed_by uuid;
+begin
+  v_username := nullif(trim(coalesce(v_meta->>'username', v_meta->>'full_name', '')), '');
+  v_phone := nullif(trim(coalesce(v_meta->>'phone', '')), '');
+  v_country := nullif(upper(trim(coalesce(v_meta->>'country', ''))), '');
+  v_invitation_code := nullif(trim(coalesce(v_meta->>'invitation_code', '')), '');
+
+  if coalesce(trim(v_meta->>'managed_by'), '') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then
+    v_managed_by := (v_meta->>'managed_by')::uuid;
+  else
+    v_managed_by := null;
+  end if;
+
+  insert into public.profiles (
+    id,
+    username,
+    email,
+    phone,
+    country,
+    role,
+    invitation_code,
+    managed_by,
+    created_at,
+    updated_at
+  )
+  values (
+    new.id,
+    v_username,
+    new.email,
+    v_phone,
+    v_country,
+    'user',
+    v_invitation_code,
+    v_managed_by,
+    coalesce(new.created_at, now()),
+    now()
+  )
+  on conflict (id) do update
+  set
+    username = coalesce(excluded.username, public.profiles.username),
+    email = coalesce(excluded.email, public.profiles.email),
+    phone = coalesce(excluded.phone, public.profiles.phone),
+    country = coalesce(excluded.country, public.profiles.country),
+    invitation_code = coalesce(excluded.invitation_code, public.profiles.invitation_code),
+    managed_by = coalesce(excluded.managed_by, public.profiles.managed_by),
+    updated_at = now();
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_sync_profile_from_auth_user on auth.users;
+create trigger trg_sync_profile_from_auth_user
+after insert on auth.users
+for each row
+execute function public.sync_profile_from_auth_user();
+
+-- Backfill users created before the trigger existed.
+insert into public.profiles (
+  id,
+  username,
+  email,
+  phone,
+  country,
+  role,
+  invitation_code,
+  managed_by,
+  created_at,
+  updated_at
+)
+select
+  u.id,
+  nullif(trim(coalesce(u.raw_user_meta_data->>'username', u.raw_user_meta_data->>'full_name', '')), ''),
+  u.email,
+  nullif(trim(coalesce(u.raw_user_meta_data->>'phone', '')), ''),
+  nullif(upper(trim(coalesce(u.raw_user_meta_data->>'country', ''))), ''),
+  'user',
+  nullif(trim(coalesce(u.raw_user_meta_data->>'invitation_code', '')), ''),
+  case
+    when coalesce(trim(u.raw_user_meta_data->>'managed_by'), '') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      then (u.raw_user_meta_data->>'managed_by')::uuid
+    else null
+  end,
+  coalesce(u.created_at, now()),
+  now()
+from auth.users u
+left join public.profiles p on p.id = u.id
+where p.id is null;
+
 
 create table if not exists public.balances (
   user_id uuid primary key references auth.users(id) on delete cascade,

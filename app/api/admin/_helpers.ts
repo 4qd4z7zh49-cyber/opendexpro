@@ -32,6 +32,15 @@ export function readCookie(req: Request, name: string) {
   return m ? decodeURIComponent(m[1]) : null;
 }
 
+export function normalizeAdminRole(value: unknown) {
+  const role = String(value || "")
+    .trim()
+    .toLowerCase();
+  if (role === "super-admin" || role === "super_admin") return "superadmin";
+  if (role === "subadmin" || role === "sub_admin") return "sub-admin";
+  return role;
+}
+
 export function requireAdminSession(req: Request) {
   const session = readCookie(req, "admin_session");
   const role = readCookie(req, "admin_role");
@@ -39,11 +48,16 @@ export function requireAdminSession(req: Request) {
 
   if (!session || !role || !adminId) return null;
 
-  return { role, adminId };
+  return { role: normalizeAdminRole(role), adminId };
 }
 
 export function isRootAdminRole(role: string) {
-  return role === "admin" || role === "superadmin";
+  const normalized = normalizeAdminRole(role);
+  return normalized === "admin" || normalized === "superadmin";
+}
+
+export function isSuperadminRole(role: unknown) {
+  return normalizeAdminRole(role) === "superadmin";
 }
 
 export type ManagedByFilter =
@@ -77,7 +91,7 @@ export async function resolveRootManagedUserIds(managedByRaw: unknown) {
 
 // ✅ subadmin က target user ကို လုပ်ခွင့်ရှိလားစစ်
 export async function assertCanManageUser(adminId: string, role: string, userId: string) {
-  if (role === "admin" || role === "superadmin") return true;
+  if (isRootAdminRole(role)) return true;
 
   // subadmin => profiles.managed_by = adminId ဖြစ်ရမယ်
   const { data, error } = await getSupabaseAdminClient()

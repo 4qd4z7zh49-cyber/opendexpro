@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { normalizeAdminRole } from "../_helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,8 @@ function getCookie(req: Request, name: string) {
 }
 
 function isAdminRole(role: string | null) {
-  return role === "admin" || role === "superadmin";
+  const normalized = normalizeAdminRole(role);
+  return normalized === "admin" || normalized === "superadmin";
 }
 
 export async function GET(req: Request) {
@@ -45,7 +47,7 @@ export async function GET(req: Request) {
   const { data, error } = await supabase
     .from("admins")
     .select("id, username, role, invitation_code, managed_by, created_at")
-    .eq("role", "sub-admin")
+    .ilike("role", "sub%admin")
     .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
