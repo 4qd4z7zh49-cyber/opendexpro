@@ -9,7 +9,7 @@ import TradingViewTape from "@components/TradingViewTape";
 
 type HomeTheme = "dark" | "light";
 
-const THEME_KEY = "openbook.home.theme";
+const THEME_KEY = "opendex.home.theme";
 
 export default function HomePage() {
   const [theme, setTheme] = useState<HomeTheme>(() => {

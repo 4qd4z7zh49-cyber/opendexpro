@@ -13,7 +13,7 @@ export type Order = {
   time: string;
 };
 
-const ORDERS_KEY = "openbookpro.trade.orders.v1";
+const ORDERS_KEY = "opendex.trade.orders.v1";
 
 type WalletStateResp = {
   ok?: boolean;

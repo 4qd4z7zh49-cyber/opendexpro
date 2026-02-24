@@ -194,7 +194,7 @@ async function handleSignup(e?: FormEvent) {
             Create your account
           </h1>
           <p style={styles.sub} className="ob-fadeUp ob-delay1">
-            Sign up to get started with OPENBOOK.
+            Sign up to get started with opendex.
           </p>
 
           <form style={styles.form} className="ob-fadeUp ob-delay2" onSubmit={handleSignup}>

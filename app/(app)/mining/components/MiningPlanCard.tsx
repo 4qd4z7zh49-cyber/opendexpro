@@ -35,8 +35,8 @@ export default function MiningPlanCard({ plan, onPurchase, progress }: Props) {
           <div className="flex items-center gap-2">
             <div className="h-9 w-9 rounded-xl bg-white/[0.06] border border-white/10 grid place-items-center">
               <Image
-                src="/openbook.png"
-                alt="Openbook logo"
+                src="/opendex.png"
+                alt="opendex logo"
                 width={18}
                 height={18}
                 className="h-[18px] w-[18px] rounded-sm object-cover"

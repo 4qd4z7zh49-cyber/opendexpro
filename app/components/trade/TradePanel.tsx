@@ -71,9 +71,9 @@ type HistoryRecord = {
   claimedAt: number;
 };
 
-const HISTORY_KEY_PREFIX = "openbookpro.trade.history.v3";
-const TRADE_NOTI_KEY_PREFIX = "openbookpro.trade.notifications.v2";
-const TRADE_SESSION_KEY_PREFIX = "openbookpro.trade.session.v1";
+const HISTORY_KEY_PREFIX = "opendex.trade.history.v3";
+const TRADE_NOTI_KEY_PREFIX = "opendex.trade.notifications.v2";
+const TRADE_SESSION_KEY_PREFIX = "opendex.trade.session.v1";
 
 type TradeNotificationStatus = "PENDING" | "CONFIRMED";
 

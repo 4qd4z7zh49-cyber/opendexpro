@@ -34,7 +34,7 @@ export async function sendOneSignalPush(input: SendPushInput) {
       external_id: externalUserIds,
     },
     headings: {
-      en: String(input.title || "OpenBookPro"),
+      en: String(input.title || "opendex"),
     },
     contents: {
       en: String(input.message || ""),

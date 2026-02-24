@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { getUserAccessToken, getUserAuthHeaders } from "@/lib/clientAuth";
 
 const ASSETS: Asset[] = ["USDT", "BTC", "ETH", "SOL", "XRP"];
-const WALLET_CACHE_KEY_PREFIX = "openbookpro.wallet.cache.v1";
+const WALLET_CACHE_KEY_PREFIX = "opendex.wallet.cache.v1";
 
 type PriceMap = Record<Asset, number | null>;
 type BalanceMap = Record<Asset, number>;

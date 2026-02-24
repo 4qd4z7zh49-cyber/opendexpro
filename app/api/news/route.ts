@@ -77,7 +77,7 @@ async function readFeed(url: string) {
   const res = await fetch(url, {
     headers: {
       accept: "application/rss+xml, application/xml, text/xml",
-      "user-agent": "Mozilla/5.0 OpenBookPro/1.0",
+      "user-agent": "Mozilla/5.0 opendex/1.0",
     },
     next: { revalidate: 300 },
   });

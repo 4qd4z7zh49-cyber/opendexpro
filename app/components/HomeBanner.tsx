@@ -79,7 +79,7 @@ type TradeNotificationRow = {
   updatedAt?: number;
 };
 
-const TRADE_NOTI_KEY_PREFIX = "openbookpro.trade.notifications.v2";
+const TRADE_NOTI_KEY_PREFIX = "opendex.trade.notifications.v2";
 const NOTI_REFRESH_MS = 7_000;
 
 function fmtMoney(v: number) {
@@ -549,7 +549,7 @@ export default function HomeBanner({
         <div className="hbText">
           <div className="hbSmall">Welcome back</div>
           <div className="hbTitleWrap">
-            <div className="hbTitle hbTitleMain">OPENBOOKPRO</div>
+            <div className="hbTitle hbTitleMain">opendex</div>
             <div className="hbBrandSub">AI-POWERED FINANCIAL EXPERIENCE</div>
           </div>
 

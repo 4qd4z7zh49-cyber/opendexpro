@@ -52,7 +52,7 @@ type AppSettings = {
   };
 };
 
-const SETTINGS_METADATA_KEY = "openbook_settings_v1";
+const SETTINGS_METADATA_KEY = "opendex_settings_v1";
 const ASSETS: Asset[] = ["USDT", "BTC", "ETH", "SOL", "XRP"];
 const NETWORK_OPTIONS = ["TRC20", "ERC20", "BEP20", "SOLANA", "XRP Ledger"];
 const LANGUAGE_OPTIONS: Array<{ value: LanguageCode; label: string }> = [
@@ -778,7 +778,7 @@ export default function SettingsPage() {
               <label className="mt-3 block text-sm">
                 <span className={isLight ? "text-slate-600" : "text-white/70"}>Anti-phishing code</span>
                 <input
-                  placeholder="e.g. OPENBOOK-SAFE"
+                  placeholder="e.g. opendex-SAFE"
                   value={settings.safety.antiPhishingCode}
                   onChange={(e) =>
                     setSettings((prev) => ({

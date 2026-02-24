@@ -379,8 +379,8 @@ export default function HomeLanding() {
           <img
             ref={logoRef}
             className="heroLogo"
-            src="/openbook.png"
-            alt="OPENBOOKPRO"
+            src="/opendex.png"
+            alt="opendex"
           />
         </>
         <div className="layer">
@@ -388,14 +388,14 @@ export default function HomeLanding() {
           <div className="topbarInner">
             <div className="brand">
               <Image
-                src="/openbook.png"
-                alt="OPENBOOKPRO logo"
+                src="/opendex.png"
+                alt="opendex logo"
                 width={34}
                 height={34}
                 style={{ borderRadius: 8 }}
                 priority
               />
-              <div className="name">OPENBOOKPRO</div>
+              <div className="name">opendex</div>
             </div>
             <div className="spacer" />
             <Link className="cta" href="/login">
@@ -505,7 +505,7 @@ export default function HomeLanding() {
                 <summary>General Disclaimer</summary>
                 <div style={{ height: 10 }} />
                 <div className="small">
-                  OPENBOOKPRO provides market information and platform tools for general informational purposes only. Nothing
+                  opendex provides market information and platform tools for general informational purposes only. Nothing
                   on this website constitutes investment, legal, tax, or accounting advice, and no content should be
                   interpreted as a recommendation, offer, or solicitation to buy or sell any financial instrument. Past
                   performance is not a reliable indicator of future results.
@@ -514,7 +514,7 @@ export default function HomeLanding() {
 
               <div style={{ height: 16 }} />
               <div className="muted" style={{ textAlign: 'center' }}>
-                © {year} OPENBOOKPRO. All rights reserved.
+                © {year} opendex. All rights reserved.
               </div>
             </div>
           </div>

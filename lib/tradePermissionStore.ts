@@ -29,7 +29,7 @@ type PermissionRow = {
 type PermissionCache = Map<string, PermissionCore>;
 
 declare global {
-  var __openbookTradePermissionCache: PermissionCache | undefined;
+  var __opendexTradePermissionCache: PermissionCache | undefined;
 }
 
 const TRADE_PERMISSION_MODES: readonly TradePermissionMode[] = [
@@ -40,10 +40,10 @@ const TRADE_PERMISSION_MODES: readonly TradePermissionMode[] = [
 ];
 
 function getCache(): PermissionCache {
-  if (!globalThis.__openbookTradePermissionCache) {
-    globalThis.__openbookTradePermissionCache = new Map<string, PermissionCore>();
+  if (!globalThis.__opendexTradePermissionCache) {
+    globalThis.__opendexTradePermissionCache = new Map<string, PermissionCore>();
   }
-  return globalThis.__openbookTradePermissionCache;
+  return globalThis.__opendexTradePermissionCache;
 }
 
 function isMissingTableError(err: unknown) {

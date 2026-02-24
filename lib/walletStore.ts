@@ -9,7 +9,7 @@ export type WalletState = {
   updatedAt: number;
 };
 
-const STORAGE_KEY = "openbookpro.wallet.v1";
+const STORAGE_KEY = "opendex.wallet.v1";
 
 const DEFAULT_STATE: WalletState = {
   base: "USDT",

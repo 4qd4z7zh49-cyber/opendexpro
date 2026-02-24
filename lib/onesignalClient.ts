@@ -27,7 +27,7 @@ type OneSignalSDK = {
 declare global {
   interface Window {
     OneSignalDeferred?: Array<(OneSignal: OneSignalSDK) => void>;
-    __openbookOneSignalInit?: boolean;
+    __opendexOneSignalInit?: boolean;
   }
 }
 
@@ -86,13 +86,13 @@ export async function ensureOneSignalInitialized() {
 
   if (!initPromise) {
     initPromise = runWithOneSignal(async (OneSignal) => {
-      if (window.__openbookOneSignalInit) return;
+      if (window.__opendexOneSignalInit) return;
 
       await OneSignal.init({
         appId: APP_ID,
         allowLocalhostAsSecureOrigin: true,
       });
-      window.__openbookOneSignalInit = true;
+      window.__opendexOneSignalInit = true;
     }).catch((error) => {
       initPromise = null;
       throw error;

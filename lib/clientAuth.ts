@@ -2,7 +2,7 @@
 
 import { supabase } from "@/lib/supabaseClient";
 
-const AUTH_STORAGE_KEY = "openbookpro.auth.session";
+const AUTH_STORAGE_KEY = "opendex.auth.session";
 
 function normalizeClientAuthError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error ?? "");

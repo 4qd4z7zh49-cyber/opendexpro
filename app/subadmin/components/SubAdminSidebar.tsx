@@ -168,7 +168,7 @@ export default function SubAdminSidebar() {
         {logoutErr ? <div className="mt-2 text-xs text-red-300">{logoutErr}</div> : null}
 
         <div className="mt-3 text-xs text-white/40">
-          OpenBookPro Admin
+          opendex Admin
         </div>
       </div>
     </div>

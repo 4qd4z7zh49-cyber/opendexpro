@@ -91,7 +91,7 @@ function AdminLoginPageInner() {
         >
           <div className="mb-6">
             <div className="inline-flex rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-[11px] font-semibold tracking-[0.08em] text-blue-200">
-              OPENBOOKPRO ADMIN
+              opendex ADMIN
             </div>
             <h2 className="mt-3 text-2xl font-semibold tracking-tight">Administrator Sign In</h2>
             <p className="mt-1 text-sm text-white/60">

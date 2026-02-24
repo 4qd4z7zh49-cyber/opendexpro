@@ -59,7 +59,7 @@ export default function LoginClient() {
             Login
           </h1>
           <p style={styles.sub} className="ob-fadeUp ob-delay1">
-            Welcome back to OPENBOOK.
+            Welcome back to opendex.
           </p>
 
           <form style={styles.form} className="ob-fadeUp ob-delay2" onSubmit={handleLogin}>

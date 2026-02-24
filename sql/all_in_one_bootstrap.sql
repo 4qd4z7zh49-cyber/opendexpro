@@ -1,4 +1,4 @@
--- OpenBook: all-in-one bootstrap SQL
+-- opendex: all-in-one bootstrap SQL
 -- Safe to run multiple times.
 --
 -- Usage:

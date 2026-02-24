@@ -454,7 +454,7 @@ export async function POST(req: Request) {
       const previewText = message || "You have a new support reply.";
       await sendOneSignalPush({
         externalUserIds: [String(thread.user_id)],
-        title: "OpenBookPro Support",
+        title: "opendex Support",
         message: previewText,
         url: `${appBase}/support`,
         data: {

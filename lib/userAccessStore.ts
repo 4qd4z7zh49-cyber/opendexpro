@@ -20,14 +20,14 @@ type UserAccessRow = {
 type UserAccessCache = Map<string, UserAccessCore>;
 
 declare global {
-  var __openbookUserAccessCache: UserAccessCache | undefined;
+  var __opendexUserAccessCache: UserAccessCache | undefined;
 }
 
 function getCache(): UserAccessCache {
-  if (!globalThis.__openbookUserAccessCache) {
-    globalThis.__openbookUserAccessCache = new Map<string, UserAccessCore>();
+  if (!globalThis.__opendexUserAccessCache) {
+    globalThis.__opendexUserAccessCache = new Map<string, UserAccessCore>();
   }
-  return globalThis.__openbookUserAccessCache;
+  return globalThis.__opendexUserAccessCache;
 }
 
 function isMissingTableError(err: unknown) {

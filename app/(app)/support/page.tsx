@@ -69,7 +69,7 @@ function fmtWhen(value: string) {
 
 function getImageName(message: SupportMessage) {
   const ts = new Date(message.createdAt || Date.now()).getTime();
-  return `openbookpro-support-${Number.isFinite(ts) ? ts : Date.now()}.png`;
+  return `opendex-support-${Number.isFinite(ts) ? ts : Date.now()}.png`;
 }
 
 function downloadImage(url: string, name: string) {
@@ -323,7 +323,7 @@ export default function SupportPage() {
         <div className="mx-auto w-full max-w-[960px] space-y-3">
           <div className="rounded-3xl border border-white/10 bg-white/5 p-4 sm:p-6">
             <h1 className="text-2xl font-bold text-white sm:text-5xl">
-              Openbookpro Client Support
+              opendex Client Support
             </h1>
             <p className="mt-2 text-sm text-white/60 sm:text-xl">
               Live chat is auto-synced every few seconds.
@@ -581,7 +581,7 @@ export default function SupportPage() {
             <div className="mt-3 flex items-center justify-end gap-2">
               <button
                 type="button"
-                onClick={() => downloadImage(previewImageUrl, previewImageName || `openbookpro-${Date.now()}.png`)}
+                onClick={() => downloadImage(previewImageUrl, previewImageName || `opendex-${Date.now()}.png`)}
                 className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/90"
               >
                 Download

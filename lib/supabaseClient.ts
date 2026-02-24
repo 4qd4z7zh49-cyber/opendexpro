@@ -32,7 +32,7 @@ export function getSupabaseClient() {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      storageKey: "openbookpro.auth.session",
+      storageKey: "opendex.auth.session",
     },
   });
   return _client;

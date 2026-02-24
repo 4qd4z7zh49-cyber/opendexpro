@@ -85,7 +85,7 @@ function statusLabel(status: ThreadStatus, isZh: boolean) {
 
 function messageImageName(message: SupportMessage) {
   const ts = new Date(message.createdAt || Date.now()).getTime();
-  return `openbookpro-support-${Number.isFinite(ts) ? ts : Date.now()}.png`;
+  return `opendex-support-${Number.isFinite(ts) ? ts : Date.now()}.png`;
 }
 
 function downloadImage(url: string, name: string) {
@@ -131,7 +131,7 @@ export default function SupportChatPanel() {
   const [previewImageUrl, setPreviewImageUrl] = useState("");
   const [previewImageName, setPreviewImageName] = useState("");
   const text = {
-    title: isZh ? "Openbookpro 客服支持" : "Openbookpro Client Support",
+    title: isZh ? "opendex 客服支持" : "opendex Client Support",
     autoSync: isZh ? "每 3 秒自动同步" : "Auto-sync every 3s",
     usersTitle: isZh ? "用户会话" : "User Conversations",
     userFallback: isZh ? "用户" : "User",
@@ -743,7 +743,7 @@ export default function SupportChatPanel() {
               <button
                 type="button"
                 onClick={() =>
-                  downloadImage(previewImageUrl, previewImageName || `openbookpro-${Date.now()}.png`)
+                  downloadImage(previewImageUrl, previewImageName || `opendex-${Date.now()}.png`)
                 }
                 className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/90"
               >

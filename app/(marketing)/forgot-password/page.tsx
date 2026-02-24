@@ -98,7 +98,7 @@ export default function ForgotPasswordPage() {
       <div style={styles.shell}>
         <div style={styles.card}>
           <h1 style={styles.h1}>Forgot Password</h1>
-          <p style={styles.sub}>Enter your email to reset your OpenBookPro password.</p>
+          <p style={styles.sub}>Enter your email to reset your opendex password.</p>
 
           <form style={styles.form} onSubmit={onSubmit}>
             <label style={styles.label}>Email</label>
@@ -127,7 +127,7 @@ export default function ForgotPasswordPage() {
 
           {confirmOpen ? (
             <div style={styles.confirmBox}>
-              <div style={styles.confirmTitle}>Ask confirmation to reset OpenBookPro password?</div>
+              <div style={styles.confirmTitle}>Ask confirmation to reset opendex password?</div>
               <div style={styles.confirmEmail}>{email}</div>
               <div style={styles.confirmActions}>
                 <button

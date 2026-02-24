@@ -40,15 +40,15 @@ type CacheRow = {
 };
 
 declare global {
-  var __openbookPriceFeedCache: CacheRow | undefined;
+  var __opendexPriceFeedCache: CacheRow | undefined;
 }
 
 function getCache() {
-  return globalThis.__openbookPriceFeedCache || null;
+  return globalThis.__opendexPriceFeedCache || null;
 }
 
 function setCache(next: CacheRow) {
-  globalThis.__openbookPriceFeedCache = next;
+  globalThis.__opendexPriceFeedCache = next;
 }
 
 function toNumber(v: unknown): number | null {

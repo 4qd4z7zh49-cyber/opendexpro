@@ -258,7 +258,7 @@ export async function POST(req: Request) {
       const appBase = resolveAppBaseUrl(req);
       await sendOneSignalPush({
         externalUserIds: [userId],
-        title: subject || "OpenBookPro Notification",
+        title: subject || "opendex Notification",
         message: message || "You have a new notification.",
         url: `${appBase}/home`,
         data: {
