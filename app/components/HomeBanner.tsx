@@ -388,6 +388,18 @@ export default function HomeBanner({
         item.sourceId
       ) {
         await markNotificationRead(item.sourceId, item.source);
+        setNotifications((prev) =>
+          prev.map((row) =>
+            row.source === item.source && row.sourceId === item.sourceId
+              ? { ...row, status: "CONFIRMED" }
+              : row
+          )
+        );
+        setSelectedNotification((prev) =>
+          prev && prev.source === item.source && prev.sourceId === item.sourceId
+            ? { ...prev, status: "CONFIRMED" }
+            : prev
+        );
       }
     },
     [markNotificationRead]

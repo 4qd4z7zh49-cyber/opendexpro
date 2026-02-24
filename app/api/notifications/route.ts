@@ -239,14 +239,14 @@ function mapSupportRows(rows: SupportRow[]): NotificationItem[] {
     const status: NotificationStatus = isPending ? "PENDING" : "CONFIRMED";
 
     const fullText = isPending
-      ? "You have a new reply from client support. Open Support to continue."
-      : "Your support ticket was closed. You can open Support to send a new message.";
+      ? "You have a new reply from the support team. Open Support to continue."
+      : "Your support ticket was closed. Open Support to send a new message.";
 
     return [{
       id: String(row.id),
       source: "SUPPORT",
       status,
-      title: isPending ? "Unread Support Message" : "Support Updated",
+      title: isPending ? "Unread Support Reply" : "Support Updated",
       detail: preview(fullText),
       fullText,
       createdAt: String(row.last_message_at || row.updated_at || row.created_at || ""),
