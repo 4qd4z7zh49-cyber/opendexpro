@@ -224,9 +224,14 @@ function fmtManagedBy(user: UserRow) {
 }
 
 function fmtAsset(v: number | null | undefined, asset: Asset) {
-  const n = Number(v ?? 0);
+  const n = toFiniteNumber(v);
   const maxFractionDigits = asset === "USDT" ? 2 : 8;
   return n.toLocaleString(undefined, { maximumFractionDigits: maxFractionDigits });
+}
+
+function toFiniteNumber(value: unknown) {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : 0;
 }
 
 function parseDate(value?: string | null) {
@@ -1140,17 +1145,17 @@ export default function AdminPage() {
   );
 
   const largeAmountUsers = useMemo(
-    () => usersForTable.filter((row) => Number(row.usdt ?? row.balance ?? 0) > 10000),
+    () => usersForTable.filter((row) => toFiniteNumber(row.usdt ?? row.balance ?? 0) > 10000),
     [usersForTable]
   );
 
   const totalPerformanceThisMonth = useMemo(
-    () => monthlyPerformanceRows.reduce((sum, row) => sum + Number(row.amount || 0), 0),
+    () => monthlyPerformanceRows.reduce((sum, row) => sum + toFiniteNumber(row.amount), 0),
     [monthlyPerformanceRows]
   );
 
   const totalWithdrawThisMonth = useMemo(
-    () => monthlyWithdrawRows.reduce((sum, row) => sum + Number(row.amount || 0), 0),
+    () => monthlyWithdrawRows.reduce((sum, row) => sum + toFiniteNumber(row.amount), 0),
     [monthlyWithdrawRows]
   );
 
@@ -1222,7 +1227,7 @@ export default function AdminPage() {
       if (!d) return;
       const idx = d.getDate() - 1;
       if (idx < 0 || idx >= daySeries.length) return;
-      daySeries[idx].performance += Number(row.amount || 0);
+      daySeries[idx].performance += toFiniteNumber(row.amount);
     });
 
     monthlyWithdrawRows.forEach((row) => {
@@ -1230,7 +1235,7 @@ export default function AdminPage() {
       if (!d) return;
       const idx = d.getDate() - 1;
       if (idx < 0 || idx >= daySeries.length) return;
-      daySeries[idx].withdraw += Number(row.amount || 0);
+      daySeries[idx].withdraw += toFiniteNumber(row.amount);
     });
 
     const width = 980;
