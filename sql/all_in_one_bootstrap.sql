@@ -542,7 +542,9 @@ begin
   for v_attempt in 1..32 loop
     v_invite := 'SA' || upper(substr(encode(gen_random_bytes(8), 'hex'), 1, 6));
     exit when not exists (
-      select 1 from public.admins where invitation_code = v_invite
+      select 1
+      from public.admins a
+      where a.invitation_code = v_invite
     );
   end loop;
 

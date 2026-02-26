@@ -434,22 +434,20 @@ export default function SupportChatPanel() {
   };
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-      <div className="mb-4 flex items-center gap-2">
-        <div className="text-xl font-semibold">{text.title}</div>
-        <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-rose-500 px-2 py-0.5 text-xs font-semibold text-white">
-          {pendingCount}
-        </span>
-      </div>
-      <div className="mb-4 text-xs text-white/50">{text.autoSync}</div>
-
+    <div className="support-panel flex h-[calc(100dvh-6.75rem)] min-h-[560px] flex-col overflow-hidden rounded-3xl border p-4 sm:h-[calc(100dvh-7.25rem)] sm:p-5 lg:p-6">
       {listErr ? <div className="mb-3 text-sm text-red-300">{listErr}</div> : null}
 
-      <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-          <div className="mb-2 text-sm font-semibold text-white">{text.usersTitle}</div>
+      <div className="support-layout grid min-h-0 flex-1 gap-4 [grid-template-rows:minmax(200px,34%)_minmax(0,1fr)] lg:grid-cols-[300px_1fr] lg:[grid-template-rows:none]">
+        <div className="support-card flex min-h-0 flex-col rounded-2xl border p-3">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div className="text-sm font-semibold">{text.usersTitle}</div>
+            <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-rose-500 px-2 py-0.5 text-xs font-semibold text-white">
+              {pendingCount}
+            </span>
+          </div>
+          <div className="support-muted mb-2 text-[11px]">{text.autoSync}</div>
 
-          <div className="max-h-[65vh] space-y-2 overflow-auto pr-1">
+          <div className="support-scroll flex-1 min-h-0 space-y-2 pr-1">
             {threads.map((thread) => {
               const active = thread.id === activeThreadId;
               return (
@@ -458,16 +456,14 @@ export default function SupportChatPanel() {
                   type="button"
                   onClick={() => selectThread(thread.id)}
                   className={[
-                    "w-full rounded-xl border px-3 py-2 text-left",
-                    active
-                      ? "border-blue-400/50 bg-blue-500/15 text-white"
-                      : "border-white/10 bg-black/20 text-white/85 hover:bg-black/30",
+                    "support-thread-item w-full rounded-xl border px-3 py-2 text-left",
+                    active ? "is-active" : "",
                   ].join(" ")}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="text-sm font-semibold">{thread.username || text.userFallback}</div>
-                      <div className="mt-0.5 text-xs text-white/60">{thread.email || "-"}</div>
+                      <div className="support-muted mt-0.5 text-xs">{thread.email || "-"}</div>
                     </div>
                     {thread.needsReply ? (
                       <span className="rounded-full border border-amber-300/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-200">
@@ -475,35 +471,35 @@ export default function SupportChatPanel() {
                       </span>
                     ) : null}
                   </div>
-                  <div className="mt-1 text-[11px] text-white/50">{fmtWhen(thread.lastMessageAt)}</div>
+                  <div className="support-muted mt-1 text-[11px]">{fmtWhen(thread.lastMessageAt)}</div>
                 </button>
               );
             })}
 
             {!loading && threads.length === 0 ? (
-              <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs text-white/60">
+              <div className="support-empty rounded-xl border px-3 py-2 text-xs">
                 {text.noThreads}
               </div>
             ) : null}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-          <div className="mb-3 rounded-xl border border-white/10 bg-black/20 p-3">
-            <div className="text-xs text-white/60">{text.startSendToUser}</div>
+        <div className="support-card flex min-h-0 flex-col overflow-hidden rounded-2xl border p-3 sm:p-4">
+          <div className="support-subcard mb-3 rounded-xl border p-3">
+            <div className="support-muted text-xs">{text.startSendToUser}</div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <select
                 value={composeUserId}
                 onChange={(e) => setComposeUserId(e.target.value)}
-                className="min-w-[230px] flex-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none"
+                className="support-input min-w-[230px] flex-1 rounded-xl px-3 py-2 text-sm outline-none"
               >
                 {users.length === 0 ? (
-                  <option value="" className="bg-[#101216] text-white">
+                  <option value="">
                     {text.noUsers}
                   </option>
                 ) : null}
                 {users.map((u) => (
-                  <option key={u.id} value={u.id} className="bg-[#101216] text-white">
+                  <option key={u.id} value={u.id}>
                     {(u.username || text.userFallback) + (u.email ? ` (${u.email})` : "")}
                   </option>
                 ))}
@@ -512,12 +508,12 @@ export default function SupportChatPanel() {
                 type="button"
                 onClick={openOrPrepareUserChat}
                 disabled={!composeUserId}
-                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/90 hover:bg-white/10 disabled:opacity-60"
+                className="support-soft-btn rounded-xl px-3 py-2 text-xs disabled:opacity-60"
               >
                 {hasExistingThreadForComposeUser ? text.openChat : text.startNewChat}
               </button>
             </div>
-            {usersLoading ? <div className="mt-2 text-xs text-white/50">{text.loadingUsers}</div> : null}
+            {usersLoading ? <div className="support-muted mt-2 text-xs">{text.loadingUsers}</div> : null}
             {usersErr ? <div className="mt-2 text-xs text-red-300">{usersErr}</div> : null}
           </div>
 
@@ -530,161 +526,159 @@ export default function SupportChatPanel() {
           />
 
           {activeThread ? (
-            <>
-              <div className="mb-3 flex flex-wrap items-start justify-between gap-3 border-b border-white/10 pb-3">
+            <div className="flex min-h-0 flex-1 flex-col">
+              <div className="mb-2 flex flex-wrap items-start justify-between gap-3 border-b border-white/10 pb-2">
                 <div>
-                  <div className="text-base font-semibold text-white">
+                  <div className="text-base font-semibold">
                     {activeThread.username || text.userFallback}
                   </div>
-                  <div className="text-sm text-white/60">{activeThread.email || "-"}</div>
+                  <div className="support-muted text-sm">{activeThread.email || "-"}</div>
                 </div>
-                <div className="text-right text-xs text-white/60">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-500/10 px-3 py-1 text-emerald-200">
-                    {statusLabel(activeThread.status, isZh)}
-                  </div>
-                  <div className="mt-1 text-white/45">{text.replyHours}</div>
+                <div className="support-muted text-right text-xs">
+                  {text.replyHours}
                 </div>
               </div>
 
-              <div
-                ref={bodyRef}
-                className="max-h-[56vh] space-y-3 overflow-auto rounded-xl border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.08),_rgba(17,24,39,0.85)_40%,_rgba(10,10,14,1)_80%)] p-3"
-              >
-                {messages.map((row) => {
-                  const mine = row.senderRole === "ADMIN";
-                  return (
-                    <div key={row.id} className={["flex", mine ? "justify-end" : "justify-start"].join(" ")}>
-                      <div
-                        className={[
-                          "relative max-w-[90%] rounded-2xl px-3 py-2 text-sm",
-                          mine
-                            ? "bg-blue-600 text-white shadow-[0_8px_20px_rgba(37,99,235,0.35)]"
-                            : "border border-white/10 bg-[#1d1f25] text-white/90",
-                        ].join(" ")}
-                      >
-                        <span
-                          className={[
-                            "absolute top-3 h-3 w-3 rotate-45",
-                            mine
-                              ? "-right-1.5 bg-blue-600"
-                              : "-left-1.5 border-l border-t border-white/10 bg-[#1d1f25]",
-                          ].join(" ")}
-                          aria-hidden="true"
-                        />
-
-                        {row.messageType === "IMAGE" && row.imageUrl ? (
-                          <div className="relative mb-2">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setImageMenuId((prev) => (prev === row.id ? "" : row.id));
-                              }}
-                              className="absolute right-2 top-2 z-10 rounded-lg border border-black/25 bg-black/45 px-2 py-0.5 text-xs text-white/90"
-                            >
-                              ...
-                            </button>
-
-                            {imageMenuId === row.id ? (
-                              <div
-                                onClick={(e) => e.stopPropagation()}
-                                className="absolute right-2 top-9 z-20 w-32 overflow-hidden rounded-lg border border-white/20 bg-[#111827] text-xs text-white shadow-[0_14px_30px_rgba(0,0,0,0.45)]"
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setPreviewImageUrl(row.imageUrl || "");
-                                    setPreviewImageName(messageImageName(row));
-                                    setImageMenuId("");
-                                  }}
-                                  className="block w-full px-3 py-2 text-left hover:bg-white/10"
-                                >
-                                  {text.preview}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    downloadImage(row.imageUrl || "", messageImageName(row));
-                                    setImageMenuId("");
-                                  }}
-                                  className="block w-full px-3 py-2 text-left hover:bg-white/10"
-                                >
-                                  {text.download}
-                                </button>
-                              </div>
-                            ) : null}
-
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setPreviewImageUrl(row.imageUrl || "");
-                                setPreviewImageName(messageImageName(row));
-                              }}
-                              className="block rounded-xl"
-                            >
-                              <>
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src={row.imageUrl}
-                                  alt="chat image"
-                                  className="max-h-72 w-auto max-w-full rounded-xl border border-white/20 object-contain"
-                                />
-                              </>
-                            </button>
-                          </div>
-                        ) : null}
-
-                        {row.message ? (
-                          <div className="whitespace-pre-wrap break-words">{row.message}</div>
-                        ) : null}
-
+              <div className="relative flex-1 min-h-0">
+                <div className="support-status-chip absolute left-3 top-3 z-10 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs">
+                  {statusLabel(activeThread.status, isZh)}
+                </div>
+                <div
+                  ref={bodyRef}
+                  className="support-chat-surface support-scroll h-full min-h-0 space-y-3 rounded-xl border p-3 pt-14"
+                >
+                  {messages.map((row) => {
+                    const mine = row.senderRole === "ADMIN";
+                    return (
+                      <div key={row.id} className={["flex", mine ? "justify-end" : "justify-start"].join(" ")}>
                         <div
                           className={[
-                            "mt-1 flex items-center justify-end gap-1 text-[10px]",
-                            mine ? "text-blue-100/80" : "text-white/50",
+                            "support-bubble relative max-w-[90%] rounded-2xl px-3 py-2 text-sm",
+                            mine ? "support-bubble--mine" : "support-bubble--other",
                           ].join(" ")}
                         >
-                          <span>{fmtWhen(row.createdAt)}</span>
-                          {mine ? <span>• {text.sent}</span> : null}
+                          <span
+                            className={[
+                              "absolute top-3 h-3 w-3 rotate-45",
+                              mine ? "-right-1.5 support-bubble-tail--mine" : "-left-1.5 support-bubble-tail--other",
+                            ].join(" ")}
+                            aria-hidden="true"
+                          />
+
+                          {row.messageType === "IMAGE" && row.imageUrl ? (
+                            <div className="relative mb-2">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setImageMenuId((prev) => (prev === row.id ? "" : row.id));
+                                }}
+                                className="support-image-menu-toggle absolute right-2 top-2 z-10 rounded-lg px-2 py-0.5 text-xs"
+                              >
+                                ...
+                              </button>
+
+                              {imageMenuId === row.id ? (
+                                <div
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="support-image-menu absolute right-2 top-9 z-20 w-32 overflow-hidden rounded-lg text-xs shadow-[0_14px_30px_rgba(0,0,0,0.45)]"
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setPreviewImageUrl(row.imageUrl || "");
+                                      setPreviewImageName(messageImageName(row));
+                                      setImageMenuId("");
+                                    }}
+                                    className="block w-full px-3 py-2 text-left hover:bg-white/10"
+                                  >
+                                    {text.preview}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      downloadImage(row.imageUrl || "", messageImageName(row));
+                                      setImageMenuId("");
+                                    }}
+                                    className="block w-full px-3 py-2 text-left hover:bg-white/10"
+                                  >
+                                    {text.download}
+                                  </button>
+                                </div>
+                              ) : null}
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPreviewImageUrl(row.imageUrl || "");
+                                  setPreviewImageName(messageImageName(row));
+                                }}
+                                className="block rounded-xl"
+                              >
+                                <>
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={row.imageUrl}
+                                    alt="chat image"
+                                    className="max-h-72 w-auto max-w-full rounded-xl border border-white/20 object-contain"
+                                  />
+                                </>
+                              </button>
+                            </div>
+                          ) : null}
+
+                          {row.message ? (
+                            <div className="whitespace-pre-wrap break-words">{row.message}</div>
+                          ) : null}
+
+                          <div
+                            className={[
+                              "mt-1 flex items-center justify-end gap-1 text-[10px]",
+                              mine ? "text-blue-100/80" : "support-muted",
+                            ].join(" ")}
+                          >
+                            <span>{fmtWhen(row.createdAt)}</span>
+                            {mine ? <span>• {text.sent}</span> : null}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
 
-                {!loading && messages.length === 0 ? (
-                  <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/60">
-                    {text.noMessages}
-                  </div>
-                ) : null}
+                  {!loading && messages.length === 0 ? (
+                    <div className="support-empty rounded-xl border px-3 py-2 text-sm">
+                      {text.noMessages}
+                    </div>
+                  ) : null}
+                </div>
               </div>
 
               {pickedImageDataUrl ? (
-                <div className="mt-3 rounded-xl border border-white/10 bg-black/30 p-3">
-                  <div className="mb-2 text-xs text-white/60">{pickedImageName || text.selectedPhoto}</div>
+                <div className="support-subcard mt-2 shrink-0 rounded-xl border p-3">
+                  <div className="support-muted mb-2 text-xs">{pickedImageName || text.selectedPhoto}</div>
                   <>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={pickedImageDataUrl}
                       alt="preview"
-                      className="max-h-40 rounded-lg border border-white/10 object-contain"
+                      className="max-h-36 rounded-lg border border-white/10 object-contain"
                     />
                   </>
                   <button
                     type="button"
                     onClick={clearPhoto}
-                    className="mt-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/80"
+                    className="support-soft-btn mt-2 rounded-lg px-3 py-1 text-xs"
                   >
                     {text.removePhoto}
                   </button>
                 </div>
               ) : null}
 
-              <div className="mt-3">
+              <div className="mt-2 shrink-0">
                 <textarea
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
-                  rows={3}
+                  rows={2}
                   placeholder={text.replyPlaceholder}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
@@ -692,14 +686,14 @@ export default function SupportChatPanel() {
                       if (!sendLoading) void onSend();
                     }
                   }}
-                  className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none"
+                  className="support-input w-full resize-none rounded-xl px-4 py-3 text-sm outline-none"
                 />
                 {sendErr ? <div className="mt-2 text-sm text-red-300">{sendErr}</div> : null}
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                   <button
                     type="button"
                     onClick={onPickPhoto}
-                    className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/90 hover:bg-white/10"
+                    className="support-soft-btn rounded-xl px-4 py-2 text-sm"
                   >
                     {text.addPhoto}
                   </button>
@@ -707,41 +701,41 @@ export default function SupportChatPanel() {
                     type="button"
                     disabled={sendLoading || (!draft.trim() && !pickedImageDataUrl)}
                     onClick={() => void onSend()}
-                    className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+                    className="support-primary-btn rounded-xl px-5 py-2.5 text-sm font-semibold disabled:opacity-60"
                   >
                     {sendLoading ? text.sending : text.sendReply}
                   </button>
                 </div>
               </div>
-            </>
+            </div>
           ) : (
-            <div className="space-y-3">
-              <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-4 text-sm text-white/70">
+            <div className="flex min-h-0 flex-1 flex-col gap-3">
+              <div className="support-empty rounded-xl border px-3 py-4 text-sm">
                 {text.noOpenedThread}
               </div>
 
               {pickedImageDataUrl ? (
-                <div className="rounded-xl border border-white/10 bg-black/30 p-3">
-                  <div className="mb-2 text-xs text-white/60">{pickedImageName || text.selectedPhoto}</div>
+                <div className="support-subcard rounded-xl border p-3">
+                  <div className="support-muted mb-2 text-xs">{pickedImageName || text.selectedPhoto}</div>
                   <>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={pickedImageDataUrl}
                       alt="preview"
-                      className="max-h-40 rounded-lg border border-white/10 object-contain"
+                      className="max-h-36 rounded-lg border border-white/10 object-contain"
                     />
                   </>
                   <button
                     type="button"
                     onClick={clearPhoto}
-                    className="mt-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/80"
+                    className="support-soft-btn mt-2 rounded-lg px-3 py-1 text-xs"
                   >
                     {text.removePhoto}
                   </button>
                 </div>
               ) : null}
 
-              <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+              <div className="support-subcard mt-auto rounded-xl border p-3">
                 <textarea
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
@@ -753,14 +747,14 @@ export default function SupportChatPanel() {
                       if (!sendLoading) void onSend();
                     }
                   }}
-                  className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none"
+                  className="support-input w-full rounded-xl px-4 py-3 text-sm outline-none"
                 />
                 {sendErr ? <div className="mt-2 text-sm text-red-300">{sendErr}</div> : null}
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                   <button
                     type="button"
                     onClick={onPickPhoto}
-                    className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/90 hover:bg-white/10"
+                    className="support-soft-btn rounded-xl px-4 py-2 text-sm"
                   >
                     {text.addPhoto}
                   </button>
@@ -768,7 +762,7 @@ export default function SupportChatPanel() {
                     type="button"
                     disabled={sendLoading || (!draft.trim() && !pickedImageDataUrl)}
                     onClick={() => void onSend()}
-                    className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+                    className="support-primary-btn rounded-xl px-5 py-2.5 text-sm font-semibold disabled:opacity-60"
                   >
                     {sendLoading ? text.sending : text.sendReply}
                   </button>

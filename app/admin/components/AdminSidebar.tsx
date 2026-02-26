@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 
 type DepositRequestBadgeResponse = {
   ok?: boolean;
@@ -20,23 +20,32 @@ type ManagersResponse = {
 };
 
 type SidebarLang = "en" | "zh";
+type SidebarTheme = "dark" | "light";
 
 export default function AdminSidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
+  const spKey = sp.toString();
   const tab = (sp.get("tab") || "overview").toLowerCase();
+  const isDashboardPage = pathname === "/admin";
   const managedBy = String(sp.get("managedBy") || "ALL").trim() || "ALL";
   const lang: SidebarLang = sp.get("lang") === "zh" ? "zh" : "en";
+  const theme: SidebarTheme = sp.get("theme") === "light" ? "light" : "dark";
   const isZh = lang === "zh";
+  const isPermissionTab =
+    isDashboardPage && (tab === "topups" || tab === "mining" || tab === "orders" || tab === "withdraw");
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [logoutErr, setLogoutErr] = useState("");
   const [pendingDepositCount, setPendingDepositCount] = useState(0);
   const [pendingWithdrawCount, setPendingWithdrawCount] = useState(0);
   const [pendingNotifyCount, setPendingNotifyCount] = useState(0);
   const [pendingSupportCount, setPendingSupportCount] = useState(0);
+  const [permissionsOpen, setPermissionsOpen] = useState(isPermissionTab);
+  const [permissionsFocused, setPermissionsFocused] = useState(false);
   const [managers, setManagers] = useState<ManagerRow[]>([]);
   const [managersLoading, setManagersLoading] = useState(false);
+  const isPermissionsActive = isPermissionTab || permissionsFocused;
   const text = {
     superadmin: isZh ? "超级管理员" : "Superadmin",
     managedBy: isZh ? "管理者" : "Managed By",
@@ -44,6 +53,7 @@ export default function AdminSidebar() {
     unassigned: isZh ? "未分配" : "Unassigned",
     overview: isZh ? "总览" : "Overview",
     userControl: isZh ? "用户控制" : "User Control",
+    permissions: isZh ? "权限" : "Permissions",
     depositPermission: isZh ? "充值权限" : "Deposit Permission",
     miningPermission: isZh ? "挖矿权限" : "Mining Permission",
     tradePermission: isZh ? "交易权限" : "Trade Permission",
@@ -53,18 +63,26 @@ export default function AdminSidebar() {
     superAdminProfile: isZh ? "超级管理员资料" : "Super Admin Profile",
     manageSubadmin: isZh ? "管理子管理员" : "Manage Subadmin",
     manageUser: isZh ? "管理用户" : "Manage User",
+    theme: isZh ? "主题" : "Theme",
+    dark: isZh ? "深色" : "Dark",
+    light: isZh ? "浅色" : "Light",
     logout: isZh ? "退出登录" : "Log out",
     loggingOut: isZh ? "正在退出..." : "Logging out...",
   };
 
-  const pushWithLang = (basePath: string) => {
+  const pushWithPrefs = (basePath: string) => {
     const params = new URLSearchParams();
     if (lang === "zh") params.set("lang", "zh");
+    if (theme === "light") params.set("theme", "light");
     const qs = params.toString();
     router.push(qs ? `${basePath}?${qs}` : basePath);
   };
 
   const goTab = (t: string) => {
+    const isPermissionTarget =
+      t === "topups" || t === "mining" || t === "orders" || t === "withdraw";
+    setPermissionsFocused(isPermissionTarget);
+
     const params = new URLSearchParams(sp.toString());
     params.set("tab", t);
     if (!managedBy || managedBy.toUpperCase() === "ALL") {
@@ -74,9 +92,9 @@ export default function AdminSidebar() {
     }
     router.push(`/admin?${params.toString()}`);
   };
-  const goManageAdmin = () => pushWithLang("/admin/manage-admin");
-  const goManageUser = () => pushWithLang("/admin/manage-user");
-  const goSuperAdminProfile = () => pushWithLang("/admin/superadmin-profile");
+  const goManageAdmin = () => pushWithPrefs("/admin/manage-admin");
+  const goManageUser = () => pushWithPrefs("/admin/manage-user");
+  const goSuperAdminProfile = () => pushWithPrefs("/admin/superadmin-profile");
 
   const onChangeLang = (next: SidebarLang) => {
     const params = new URLSearchParams(sp.toString());
@@ -84,6 +102,17 @@ export default function AdminSidebar() {
       params.set("lang", "zh");
     } else {
       params.delete("lang");
+    }
+    const qs = params.toString();
+    router.push(`${pathname}${qs ? `?${qs}` : ""}`);
+  };
+
+  const onChangeTheme = (next: SidebarTheme) => {
+    const params = new URLSearchParams(sp.toString());
+    if (next === "light") {
+      params.set("theme", "light");
+    } else {
+      params.delete("theme");
     }
     const qs = params.toString();
     router.push(`${pathname}${qs ? `?${qs}` : ""}`);
@@ -183,6 +212,22 @@ export default function AdminSidebar() {
   }, [managedBy]);
 
   useEffect(() => {
+    if (isPermissionTab) {
+      setPermissionsOpen(true);
+    }
+  }, [isPermissionTab]);
+
+  useEffect(() => {
+    if (!isDashboardPage) {
+      setPermissionsFocused(false);
+      return;
+    }
+    if (isPermissionTab) {
+      setPermissionsFocused(false);
+    }
+  }, [isDashboardPage, isPermissionTab, spKey]);
+
+  useEffect(() => {
     let cancelled = false;
 
     const run = async () => {
@@ -213,57 +258,48 @@ export default function AdminSidebar() {
     active: boolean,
     onClick: () => void,
     badgeCount?: number,
-    glow?: boolean
+    glow?: boolean,
+    suffix?: ReactNode
   ) => (
     <button
       onClick={onClick}
-      className={`w-full rounded-xl px-4 py-3 text-left ${
-        active ? "bg-white/10" : "bg-white/5 hover:bg-white/10"
+      className={`admin-nav-item w-full rounded-xl px-4 py-2.5 text-left ${
+        active ? "is-active" : ""
       }`}
     >
       <span className="flex items-center justify-between gap-3">
         <span
-          className={glow ? "font-semibold text-cyan-200" : undefined}
-          style={
-            glow
-              ? {
-                  textShadow:
-                    "0 0 6px rgba(34,211,238,0.85), 0 0 14px rgba(59,130,246,0.55), 0 0 24px rgba(217,70,239,0.35)",
-                }
-              : undefined
-          }
+          className={glow ? "admin-glow-label font-semibold" : undefined}
         >
           {label}
         </span>
-        {typeof badgeCount === "number" && badgeCount > 0 ? (
-          <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-xs font-semibold text-white">
-            {badgeCount}
-          </span>
-        ) : null}
+        <span className="flex items-center gap-2">
+          {typeof badgeCount === "number" && badgeCount > 0 ? (
+            <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-xs font-semibold text-white">
+              {badgeCount}
+            </span>
+          ) : null}
+          {suffix}
+        </span>
       </span>
     </button>
   );
 
   return (
-    <div className="flex h-full flex-col gap-3">
+    <div className="flex h-full flex-col gap-2.5 text-white/95">
       <div className="flex items-center justify-between gap-2">
         <div
-          className="text-xl font-bold tracking-wide"
-          style={{
-            color: "#ecfeff",
-            textShadow:
-              "0 0 6px rgba(34,211,238,0.9), 0 0 14px rgba(59,130,246,0.6), 0 0 24px rgba(217,70,239,0.38)",
-          }}
+          className="admin-brand text-xl font-bold tracking-wide"
         >
           {text.superadmin}
         </div>
-        <div className="inline-flex rounded-lg border border-white/10 bg-white/5 p-0.5 text-[11px]">
+        <div className="admin-segmented inline-flex rounded-lg p-0.5 text-[11px]">
           <button
             type="button"
             onClick={() => onChangeLang("en")}
             className={
               "rounded-md px-2 py-1 font-semibold " +
-              (!isZh ? "bg-white/15 text-white" : "text-white/65 hover:bg-white/10")
+              (!isZh ? "bg-white/20 text-white" : "text-white/70 hover:bg-white/10")
             }
           >
             EN
@@ -273,70 +309,133 @@ export default function AdminSidebar() {
             onClick={() => onChangeLang("zh")}
             className={
               "rounded-md px-2 py-1 font-semibold " +
-              (isZh ? "bg-white/15 text-white" : "text-white/65 hover:bg-white/10")
+              (isZh ? "bg-white/20 text-white" : "text-white/70 hover:bg-white/10")
             }
           >
             中文
           </button>
         </div>
       </div>
-      <label className="mt-1 block">
+      <div className="mt-0.5">
+        <div className="mb-1 text-[11px] uppercase tracking-[0.08em] text-white/45">{text.theme}</div>
+        <div className="admin-segmented inline-flex w-full rounded-xl p-1 text-xs">
+          <button
+            type="button"
+            onClick={() => onChangeTheme("dark")}
+            className={
+              "flex-1 rounded-lg px-2 py-1.5 font-semibold " +
+              (theme === "dark" ? "bg-white/20 text-white" : "text-white/70 hover:bg-white/10")
+            }
+          >
+            {text.dark}
+          </button>
+          <button
+            type="button"
+            onClick={() => onChangeTheme("light")}
+            className={
+              "flex-1 rounded-lg px-2 py-1.5 font-semibold " +
+              (theme === "light" ? "bg-white/20 text-white" : "text-white/70 hover:bg-white/10")
+            }
+          >
+            {text.light}
+          </button>
+        </div>
+      </div>
+      <label className="mt-0.5 block">
         <div className="mb-1 text-[11px] uppercase tracking-[0.08em] text-white/45">{text.managedBy}</div>
-        <select
-          value={managedBy}
-          onChange={(e) => onChangeManagedBy(e.target.value)}
-          disabled={managersLoading}
-          className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none"
-        >
-          <option value="ALL" className="bg-black">
-            {text.allUsers}
-          </option>
-          <option value="UNASSIGNED" className="bg-black">
-            {text.unassigned}
-          </option>
-          {managers.map((m) => (
-            <option key={m.id} value={m.id} className="bg-black">
-              {m.username || m.id.slice(0, 8)}
+        <div className="relative">
+          <select
+            value={managedBy}
+            onChange={(e) => onChangeManagedBy(e.target.value)}
+            disabled={managersLoading}
+            className="admin-control admin-select w-full rounded-xl px-3 py-2 text-sm outline-none"
+          >
+            <option value="ALL">
+              {text.allUsers}
             </option>
-          ))}
-        </select>
+            <option value="UNASSIGNED">
+              {text.unassigned}
+            </option>
+            {managers.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.username || m.id.slice(0, 8)}
+              </option>
+            ))}
+          </select>
+          <span className="admin-select-chevron" aria-hidden>
+            <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current stroke-[2.2]">
+              <path d="M6.75 9.25 12 14.75l5.25-5.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+        </div>
       </label>
 
-      {item(text.overview, tab === "overview", () => goTab("overview"))}
-      {item(text.userControl, tab === "users", () => goTab("users"))}
-      {item(text.depositPermission, tab === "topups", () => goTab("topups"), pendingDepositCount)}
-      {item(text.miningPermission, tab === "mining", () => goTab("mining"))}
-      {item(text.tradePermission, tab === "orders", () => goTab("orders"))}
-      {item(text.withdrawPermission, tab === "withdraw", () => goTab("withdraw"), pendingWithdrawCount)}
+      {item(text.overview, isDashboardPage && tab === "overview" && !permissionsFocused, () => goTab("overview"))}
+      {item(text.userControl, isDashboardPage && tab === "users" && !permissionsFocused, () => goTab("users"))}
+      {item(
+        text.permissions,
+        isPermissionsActive,
+        () =>
+          setPermissionsOpen((prev) => {
+            const next = !prev;
+            setPermissionsFocused(next);
+            return next;
+          }),
+        isPermissionsActive ? 0 : pendingDepositCount + pendingWithdrawCount,
+        false,
+        <span className={`admin-nav-chevron ${permissionsOpen ? "is-open" : ""}`} aria-hidden>
+          <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current stroke-[2.2]">
+            <path d="M6.75 9.25 12 14.75l5.25-5.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+      )}
+      {permissionsOpen ? (
+        <div className="space-y-2 pl-2.5">
+          {item(
+            text.depositPermission,
+            isDashboardPage && tab === "topups",
+            () => goTab("topups"),
+            pendingDepositCount
+          )}
+          {item(text.miningPermission, isDashboardPage && tab === "mining", () => goTab("mining"))}
+          {item(text.tradePermission, isDashboardPage && tab === "orders", () => goTab("orders"))}
+          {item(
+            text.withdrawPermission,
+            isDashboardPage && tab === "withdraw",
+            () => goTab("withdraw"),
+            pendingWithdrawCount
+          )}
+        </div>
+      ) : null}
       {item(
         text.mailNotify,
-        tab === "notify",
+        isDashboardPage && tab === "notify" && !permissionsFocused,
         () => goTab("notify"),
-        tab === "notify" ? 0 : pendingNotifyCount
+        isDashboardPage && tab === "notify" ? 0 : pendingNotifyCount
       )}
       {item(
         text.customerSupport,
-        tab === "support",
+        isDashboardPage && tab === "support" && !permissionsFocused,
         () => goTab("support"),
-        tab === "support" ? 0 : pendingSupportCount
+        isDashboardPage && tab === "support" ? 0 : pendingSupportCount
       )}
 
-      <div className="mt-2 border-t border-white/10 pt-3">
+      <div className="mt-1.5 space-y-2 border-t border-white/10 pt-2.5">
         {item(
           text.superAdminProfile,
           pathname === "/admin/superadmin-profile",
           goSuperAdminProfile
         )}
-        {item(text.manageSubadmin, pathname === "/admin/manage-admin", goManageAdmin, undefined, true)}
+        {item(text.manageSubadmin, pathname === "/admin/manage-admin", goManageAdmin)}
         {item(text.manageUser, pathname === "/admin/manage-user", goManageUser)}
       </div>
 
-      <div className="mt-auto border-t border-white/10 pt-3">
+      <div className="mt-auto border-t border-white/10 pt-2.5">
         <button
           type="button"
           onClick={() => void onLogout()}
           disabled={logoutLoading}
-          className="w-full rounded-xl border border-rose-400/30 bg-rose-600/90 px-4 py-3 text-left font-semibold text-white disabled:opacity-60"
+          className="w-full rounded-xl border border-rose-400/35 bg-gradient-to-br from-rose-500/85 to-fuchsia-500/70 px-4 py-2.5 text-left font-semibold text-white shadow-[0_10px_24px_rgba(190,24,93,0.35)] disabled:opacity-60"
         >
           {logoutLoading ? text.loggingOut : text.logout}
         </button>

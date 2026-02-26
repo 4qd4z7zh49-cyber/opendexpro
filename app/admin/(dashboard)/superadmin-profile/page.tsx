@@ -34,6 +34,7 @@ function fmtDate(value?: string | null) {
 export default function SuperadminProfilePage() {
   const sp = useSearchParams();
   const isZh = sp.get("lang") === "zh";
+  const isLight = sp.get("theme") === "light";
   const [profile, setProfile] = useState<SuperadminProfileRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
@@ -87,6 +88,10 @@ export default function SuperadminProfilePage() {
       : "New password and confirm password do not match",
     passwordUpdated: isZh ? "密码更新成功。" : "Password updated successfully.",
   };
+
+  const regenerateButtonClass = isLight
+    ? "rounded-xl border border-cyan-500/45 bg-cyan-100 px-4 py-2 text-sm font-semibold text-cyan-700 hover:bg-cyan-200 disabled:opacity-60"
+    : "rounded-xl border border-cyan-300/40 bg-cyan-500/20 px-4 py-2 text-sm font-semibold text-cyan-100 disabled:opacity-60";
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -181,14 +186,7 @@ export default function SuperadminProfilePage() {
   return (
     <div className="space-y-6">
       <div>
-        <div
-          className="text-2xl font-semibold"
-          style={{
-            color: "#ecfeff",
-            textShadow:
-              "0 0 6px rgba(34,211,238,0.85), 0 0 14px rgba(59,130,246,0.55), 0 0 24px rgba(217,70,239,0.35)",
-          }}
-        >
+        <div className="admin-page-title text-2xl font-semibold">
           {text.pageTitle}
         </div>
         <p className="mt-2 text-white/60">
@@ -240,7 +238,7 @@ export default function SuperadminProfilePage() {
             type="button"
             disabled={inviteBusy || loading || !profile}
             onClick={() => void regenerateInviteCode()}
-            className="rounded-xl border border-cyan-300/40 bg-cyan-500/20 px-4 py-2 text-sm font-semibold text-cyan-100 disabled:opacity-60"
+            className={regenerateButtonClass}
           >
             {inviteBusy ? text.updating : text.regenerateCode}
           </button>

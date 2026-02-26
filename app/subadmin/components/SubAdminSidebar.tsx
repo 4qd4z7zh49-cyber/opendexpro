@@ -9,32 +9,104 @@ type Item = {
   key: "overview" | "topups" | "mining" | "orders" | "withdraw" | "notify" | "support";
   label: string;
 };
+
+type SidebarLang = "en" | "zh";
+type SidebarTheme = "dark" | "light";
+
 type DepositRequestBadgeResponse = {
   ok?: boolean;
   pendingCount?: number;
 };
-
-const items: Item[] = [
-  { key: "overview", label: "Overview" },
-  { key: "topups", label: "Deposit Permission" },
-  { key: "mining", label: "Mining Permission" },
-  { key: "orders", label: "Trade Permission" },
-  { key: "withdraw", label: "Withdraw Info" },
-  { key: "notify", label: "Mail Notify" },
-  { key: "support", label: "Customer Support" },
-];
 
 export default function SubAdminSidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
   const tab = (sp.get("tab") || "overview").toLowerCase();
+  const lang: SidebarLang = sp.get("lang") === "zh" ? "zh" : "en";
+  const theme: SidebarTheme = sp.get("theme") === "light" ? "light" : "dark";
+  const isZh = lang === "zh";
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [logoutErr, setLogoutErr] = useState("");
   const [pendingDepositCount, setPendingDepositCount] = useState(0);
   const [pendingWithdrawCount, setPendingWithdrawCount] = useState(0);
   const [pendingNotifyCount, setPendingNotifyCount] = useState(0);
   const [pendingSupportCount, setPendingSupportCount] = useState(0);
+
+  const text = {
+    subadmin: isZh ? "子管理员" : "Sub-admin",
+    dashboard: isZh ? "仪表板" : "Dashboard",
+    theme: isZh ? "主题" : "Theme",
+    dark: isZh ? "深色" : "Dark",
+    light: isZh ? "浅色" : "Light",
+    overview: isZh ? "总览" : "Overview",
+    depositPermission: isZh ? "充值权限" : "Deposit Permission",
+    miningPermission: isZh ? "挖矿权限" : "Mining Permission",
+    tradePermission: isZh ? "交易权限" : "Trade Permission",
+    withdrawInfo: isZh ? "提现信息" : "Withdraw Info",
+    mailNotify: isZh ? "邮件通知" : "Mail Notify",
+    customerSupport: isZh ? "客服支持" : "Customer Support",
+    loggingOut: isZh ? "正在退出..." : "Logging out...",
+    logout: isZh ? "退出登录" : "Log out",
+  };
+
+  const items: Item[] = [
+    { key: "overview", label: text.overview },
+    { key: "topups", label: text.depositPermission },
+    { key: "mining", label: text.miningPermission },
+    { key: "orders", label: text.tradePermission },
+    { key: "withdraw", label: text.withdrawInfo },
+    { key: "notify", label: text.mailNotify },
+    { key: "support", label: text.customerSupport },
+  ];
+
+  const onChangeLang = (next: SidebarLang) => {
+    const params = new URLSearchParams(sp.toString());
+    if (next === "zh") {
+      params.set("lang", "zh");
+    } else {
+      params.delete("lang");
+    }
+    if (theme === "light") {
+      params.set("theme", "light");
+    } else {
+      params.delete("theme");
+    }
+    const qs = params.toString();
+    router.push(`${pathname}${qs ? `?${qs}` : ""}`);
+  };
+
+  const onChangeTheme = (next: SidebarTheme) => {
+    const params = new URLSearchParams(sp.toString());
+    if (next === "light") {
+      params.set("theme", "light");
+    } else {
+      params.delete("theme");
+    }
+    if (lang === "zh") {
+      params.set("lang", "zh");
+    } else {
+      params.delete("lang");
+    }
+    const qs = params.toString();
+    router.push(`${pathname}${qs ? `?${qs}` : ""}`);
+  };
+
+  const hrefForTab = (nextTab: Item["key"]) => {
+    const params = new URLSearchParams(sp.toString());
+    params.set("tab", nextTab);
+    if (lang === "zh") {
+      params.set("lang", "zh");
+    } else {
+      params.delete("lang");
+    }
+    if (theme === "light") {
+      params.set("theme", "light");
+    } else {
+      params.delete("theme");
+    }
+    return `${pathname}?${params.toString()}`;
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -108,23 +180,70 @@ export default function SubAdminSidebar() {
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col text-white/95">
       <div className="px-4 pt-5">
-        <div className="text-lg font-semibold">Sub-admin</div>
-        <div className="mt-1 text-sm text-white/60">Dashboard</div>
+        <div className="admin-brand text-lg font-semibold">{text.subadmin}</div>
+        <div className="mt-1 text-sm text-white/60">{text.dashboard}</div>
+        <div className="mt-3 inline-flex rounded-lg admin-segmented p-0.5 text-[11px]">
+          <button
+            type="button"
+            onClick={() => onChangeLang("en")}
+            className={
+              "rounded-md px-2 py-1 font-semibold " +
+              (!isZh ? "bg-white/20 text-white" : "text-white/70 hover:bg-white/10")
+            }
+          >
+            EN
+          </button>
+          <button
+            type="button"
+            onClick={() => onChangeLang("zh")}
+            className={
+              "rounded-md px-2 py-1 font-semibold " +
+              (isZh ? "bg-white/20 text-white" : "text-white/70 hover:bg-white/10")
+            }
+          >
+            中文
+          </button>
+        </div>
+        <div className="mt-2">
+          <div className="mb-1 text-[11px] uppercase tracking-[0.08em] text-white/45">{text.theme}</div>
+          <div className="admin-segmented inline-flex w-full rounded-xl p-1 text-xs">
+            <button
+              type="button"
+              onClick={() => onChangeTheme("dark")}
+              className={
+                "flex-1 rounded-lg px-2 py-1.5 font-semibold " +
+                (theme === "dark" ? "bg-white/20 text-white" : "text-white/70 hover:bg-white/10")
+              }
+            >
+              {text.dark}
+            </button>
+            <button
+              type="button"
+              onClick={() => onChangeTheme("light")}
+              className={
+                "flex-1 rounded-lg px-2 py-1.5 font-semibold " +
+                (theme === "light" ? "bg-white/20 text-white" : "text-white/70 hover:bg-white/10")
+              }
+            >
+              {text.light}
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="mt-5 px-2">
         {items.map((it) => {
           const active = tab === it.key;
-          const href = `${pathname}?tab=${it.key}`;
+          const href = hrefForTab(it.key);
           return (
             <Link
               key={it.key}
               href={href}
               className={[
-                "mb-1 flex items-center justify-between rounded-2xl px-3 py-2 text-sm",
-                active ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/5",
+                "admin-nav-item mb-1 flex items-center justify-between rounded-2xl px-3 py-2 text-sm",
+                active ? "is-active text-white" : "text-white/70 hover:bg-white/5",
               ].join(" ")}
             >
               <span className="flex items-center gap-2">
@@ -161,9 +280,9 @@ export default function SubAdminSidebar() {
           type="button"
           onClick={() => void onLogout()}
           disabled={logoutLoading}
-          className="w-full rounded-xl border border-rose-400/30 bg-rose-600/90 px-4 py-2 text-left text-sm font-semibold text-white disabled:opacity-60"
+          className="w-full rounded-xl border border-rose-400/35 bg-gradient-to-br from-rose-500/85 to-fuchsia-500/70 px-4 py-2 text-left text-sm font-semibold text-white shadow-[0_10px_24px_rgba(190,24,93,0.35)] disabled:opacity-60"
         >
-          {logoutLoading ? "Logging out..." : "Log out"}
+          {logoutLoading ? text.loggingOut : text.logout}
         </button>
         {logoutErr ? <div className="mt-2 text-xs text-red-300">{logoutErr}</div> : null}
 
