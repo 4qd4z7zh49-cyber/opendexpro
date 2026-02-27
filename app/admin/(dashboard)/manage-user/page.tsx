@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 type UserRow = {
@@ -68,7 +68,7 @@ function managerOptionLabel(manager: ManagerRow, isZh = false) {
   return `${manager.username || manager.id.slice(0, 8)} (${roleLabel(manager.role, isZh)})`;
 }
 
-export default function ManageUserPage() {
+function ManageUserPageInner() {
   const sp = useSearchParams();
   const isZh = sp.get("lang") === "zh";
   const [users, setUsers] = useState<UserRow[]>([]);
@@ -301,5 +301,13 @@ export default function ManageUserPage() {
         ) : null}
       </div>
     </div>
+  );
+}
+
+export default function ManageUserPage() {
+  return (
+    <Suspense fallback={<div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-white/70">Loading...</div>}>
+      <ManageUserPageInner />
+    </Suspense>
   );
 }

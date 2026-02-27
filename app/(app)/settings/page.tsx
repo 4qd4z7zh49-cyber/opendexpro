@@ -170,6 +170,7 @@ export default function SettingsPage() {
   const [savingPassword, setSavingPassword] = useState(false);
   const [securityInfo, setSecurityInfo] = useState("");
 
+  const [logoutLoading, setLogoutLoading] = useState(false);
   const [logoutAllLoading, setLogoutAllLoading] = useState(false);
   const [pushState, setPushState] = useState<OneSignalPushState>({
     configured: isOneSignalConfigured(),
@@ -390,6 +391,23 @@ export default function SettingsPage() {
     }
   };
 
+  const logoutCurrentDevice = async () => {
+    const ok = window.confirm("Log out from this device?");
+    if (!ok) return;
+    try {
+      setLogoutLoading(true);
+      setError("");
+      const { error: outErr } = await supabase.auth.signOut();
+      if (outErr) throw outErr;
+      router.replace("/login");
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to log out";
+      setError(message);
+    } finally {
+      setLogoutLoading(false);
+    }
+  };
+
   const logoutAllDevices = async () => {
     const ok = window.confirm("Log out from all devices?");
     if (!ok) return;
@@ -457,16 +475,26 @@ export default function SettingsPage() {
                 Account, security, notification and wallet safety controls.
               </div>
             </div>
-            <Link
-              href="/home"
-              className={`inline-flex items-center justify-center rounded-xl border px-3 py-2 text-xs font-semibold ${
-                isLight
-                  ? "border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200"
-                  : "border-white/15 bg-white/10 text-white hover:bg-white/15"
-              }`}
-            >
-              Back Home
-            </Link>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void logoutCurrentDevice()}
+                disabled={logoutLoading}
+                className="inline-flex items-center justify-center rounded-xl bg-rose-600 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {logoutLoading ? "Logging out..." : "Log out"}
+              </button>
+              <Link
+                href="/home"
+                className={`inline-flex items-center justify-center rounded-xl border px-3 py-2 text-xs font-semibold ${
+                  isLight
+                    ? "border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200"
+                    : "border-white/15 bg-white/10 text-white hover:bg-white/15"
+                }`}
+              >
+                Back Home
+              </Link>
+            </div>
           </div>
         </div>
 

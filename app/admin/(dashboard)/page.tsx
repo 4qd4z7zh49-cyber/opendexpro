@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import MiningPendingTable from "../components/MiningPendingTable";
 import WithdrawRequestsPanel from "../components/WithdrawRequestsPanel";
@@ -360,7 +360,7 @@ function activityStatusClass(status: string) {
   return "border-white/20 bg-white/5 text-white/70";
 }
 
-export default function AdminPage() {
+function AdminPageInner() {
   const sp = useSearchParams();
   const tab = (sp.get("tab") || "overview").toLowerCase();
   const managedBy = String(sp.get("managedBy") || "ALL").trim() || "ALL";
@@ -2656,5 +2656,13 @@ export default function AdminPage() {
     <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
       <div className="text-white/60">{copy.unknownTab}</div>
     </div>
+  );
+}
+
+export default function AdminPage() {
+  return (
+    <Suspense fallback={<div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-white/70">Loading...</div>}>
+      <AdminPageInner />
+    </Suspense>
   );
 }

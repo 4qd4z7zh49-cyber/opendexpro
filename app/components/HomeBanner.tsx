@@ -482,7 +482,7 @@ export default function HomeBanner({
             type="button"
             className="hbIconBtn"
             aria-label="Profile"
-            onClick={() => setProfileOpen(true)}
+            onClick={() => router.push("/settings")}
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
               <path

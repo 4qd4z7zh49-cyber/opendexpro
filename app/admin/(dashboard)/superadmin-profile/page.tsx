@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 type SuperadminProfileRow = {
@@ -31,7 +31,7 @@ function fmtDate(value?: string | null) {
   return d.toISOString().slice(0, 10);
 }
 
-export default function SuperadminProfilePage() {
+function SuperadminProfilePageInner() {
   const sp = useSearchParams();
   const isZh = sp.get("lang") === "zh";
   const isLight = sp.get("theme") === "light";
@@ -321,5 +321,13 @@ export default function SuperadminProfilePage() {
         ) : null}
       </div>
     </div>
+  );
+}
+
+export default function SuperadminProfilePage() {
+  return (
+    <Suspense fallback={<div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-white/70">Loading...</div>}>
+      <SuperadminProfilePageInner />
+    </Suspense>
   );
 }

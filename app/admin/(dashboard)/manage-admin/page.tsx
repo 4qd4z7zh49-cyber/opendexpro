@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 type Row = {
@@ -266,7 +266,7 @@ function PerformanceLineChart({
   );
 }
 
-export default function ManageAdminPage() {
+function ManageAdminPageInner() {
   const sp = useSearchParams();
   const isZh = sp.get("lang") === "zh";
   const isLight = sp.get("theme") === "light";
@@ -1200,5 +1200,13 @@ export default function ManageAdminPage() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+export default function ManageAdminPage() {
+  return (
+    <Suspense fallback={<div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-white/70">Loading...</div>}>
+      <ManageAdminPageInner />
+    </Suspense>
   );
 }
