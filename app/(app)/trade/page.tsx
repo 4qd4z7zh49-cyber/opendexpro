@@ -12,8 +12,12 @@ export default function TradePage() {
   return (
     <div className="mx-auto w-full max-w-[760px] space-y-3 px-3 pb-2 pt-4 text-white sm:px-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="trade-light-sweep relative inline-block min-h-[2rem] text-2xl font-bold">
-          AI powered Trade
+        <h1 className="inline-flex min-h-[2rem] items-center gap-1 text-2xl font-extrabold tracking-[-0.03em] text-slate-950 drop-shadow-[0_10px_24px_rgba(148,163,184,0.18)]">
+          <span className="text-slate-900">AI</span>
+          <span className="bg-[linear-gradient(135deg,#0f5f9f,#2563eb_58%,#7dd3fc)] bg-clip-text text-transparent drop-shadow-none">
+            powered
+          </span>
+          <span className="text-slate-900">Trade</span>
         </h1>
         <Link
           href="/wallet#exchange"
@@ -30,35 +34,6 @@ export default function TradePage() {
       ) : (
         <TradePanel />
       )}
-
-      <style jsx>{`
-        .trade-light-sweep {
-          color: rgba(255, 255, 255, 0.95);
-          background-image:
-            linear-gradient(
-              110deg,
-              rgba(255, 255, 255, 0.92) 0%,
-              rgba(255, 255, 255, 0.92) 35%,
-              rgba(186, 230, 253, 0.95) 50%,
-              rgba(255, 255, 255, 0.92) 65%,
-              rgba(255, 255, 255, 0.92) 100%
-            );
-          background-size: 220% 100%;
-          -webkit-background-clip: text;
-          background-clip: text;
-          color: transparent;
-          animation: tradeSweep 3.2s linear infinite;
-        }
-
-        @keyframes tradeSweep {
-          0% {
-            background-position: 120% 50%;
-          }
-          100% {
-            background-position: -120% 50%;
-          }
-        }
-      `}</style>
     </div>
   );
 }

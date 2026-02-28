@@ -6,21 +6,23 @@ import HomeBanner from "@components/HomeBanner";
 import FeatureGrid from "@components/FeatureGrid";
 import HomeNewsSection from "@components/HomeNewsSection";
 import TradingViewTape from "@components/TradingViewTape";
+import VipProgramModal from "@components/VipProgramModal";
 
 type HomeTheme = "dark" | "light";
 
-const THEME_KEY = "opendex.home.theme";
+const THEME_KEY = "opendex.home.theme.v2";
 
 export default function HomePage() {
   const [theme, setTheme] = useState<HomeTheme>(() => {
-    if (typeof window === "undefined") return "dark";
+    if (typeof window === "undefined") return "light";
     try {
       const saved = localStorage.getItem(THEME_KEY);
-      return saved === "light" || saved === "dark" ? saved : "dark";
+      return saved === "light" || saved === "dark" ? saved : "light";
     } catch {
-      return "dark";
+      return "light";
     }
   });
+  const [vipPromoOpen, setVipPromoOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -33,12 +35,13 @@ export default function HomePage() {
 
   return (
     <div className={`homeWrap ${theme === "light" ? "homeThemeLight" : "homeThemeDark"}`}>
+      <VipProgramModal open={vipPromoOpen} theme={theme} onClose={() => setVipPromoOpen(false)} />
       <HomeBanner
         theme={theme}
         onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
       />
       <TradingViewTape theme={theme} />
-      <FeatureGrid />
+      <FeatureGrid onVipBenefitsClick={() => setVipPromoOpen(true)} />
       <HomeNewsSection />
       <div className="homeBottomSpace" />
     </div>

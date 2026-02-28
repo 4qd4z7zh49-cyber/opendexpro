@@ -15,14 +15,16 @@ export default function TradeOrders({
   const [tab, setTab] = useState<'open' | 'history'>('open');
 
   return (
-    <div className="bg-black border border-neutral-800 rounded-xl p-3">
-      <div className="flex gap-2 mb-3">
+    <div className="rounded-[1.6rem] border border-sky-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.78),rgba(239,246,255,0.64))] p-4 shadow-[0_18px_44px_rgba(82,132,198,0.12)] backdrop-blur-2xl">
+      <div className="mb-3 flex gap-2">
         {tabs.map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-full ${
-              tab === t ? 'bg-slate-700' : 'bg-neutral-900'
+            className={`rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+              tab === t
+                ? 'bg-[linear-gradient(135deg,rgba(96,165,250,0.24),rgba(255,255,255,0.88))] text-sky-800'
+                : 'bg-white/70 text-slate-500'
             }`}
           >
             {t === 'open' ? 'Open Orders' : 'History'}
@@ -30,7 +32,7 @@ export default function TradeOrders({
         ))}
       </div>
 
-      <div className="text-sm mb-2">
+      <div className="mb-2 text-sm text-slate-600">
         PnL:{' '}
         <b className={pnl >= 0 ? 'text-green-500' : 'text-red-500'}>
           {pnl >= 0 ? '+' : ''}
@@ -40,10 +42,7 @@ export default function TradeOrders({
 
       <div className="space-y-2 max-h-40 overflow-auto">
         {orders.map((o) => (
-          <div
-            key={o.id}
-            className="p-2 rounded-lg bg-neutral-900 text-xs flex justify-between"
-          >
+          <div key={o.id} className="flex justify-between rounded-xl bg-white/70 p-2.5 text-xs text-slate-700">
             <span>{o.side}</span>
             <span>${o.price}</span>
           </div>

@@ -225,8 +225,8 @@ export default function MiningPage() {
           </div>
         </header>
 
-        <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">
-          Purchase request will stay <b>PENDING</b> until mining server approves it.
+        <div className="rounded-2xl border border-amber-300/55 bg-[linear-gradient(135deg,rgba(255,244,214,0.96),rgba(255,236,184,0.9))] px-4 py-3 text-sm font-medium text-[#7a4300] shadow-[0_12px_28px_rgba(217,119,6,0.08)]">
+          Purchase request will stay <b className="text-[#4a2500]">PENDING</b> until mining server approves it.
         </div>
         {miningRestricted ? (
           <div className="rounded-2xl border border-rose-300/20 bg-rose-300/10 px-4 py-3 text-sm text-rose-100">

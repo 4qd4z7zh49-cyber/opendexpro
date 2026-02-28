@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 
 type Item = {
   title: string;
@@ -109,14 +109,73 @@ const items: Item[] = [
       </svg>
     ),
   },
+  {
+    title: "VIP\nBenefits",
+    href: "/vip-announcement",
+    icon: () => (
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
+        <path
+          d="M6 18 4.3 8.5l4 2.7L12 5l3.7 6.2 4-2.7L18 18Z"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          opacity="0.95"
+        />
+        <path
+          d="M8 18h8"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          opacity="0.95"
+        />
+      </svg>
+    ),
+  },
+  {
+    title: "Loan",
+    href: "/loan",
+    icon: () => (
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
+        <path
+          d="M6.5 8.5h11a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2Z"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+          opacity="0.95"
+        />
+        <path
+          d="M8 13h8M12 10.5v5"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          opacity="0.95"
+        />
+      </svg>
+    ),
+  },
 ];
 
-export default function FeatureGrid() {
+export default function FeatureGrid({
+  onVipBenefitsClick,
+}: {
+  onVipBenefitsClick?: () => void;
+}) {
   return (
     <section className="featureGridWrap" aria-label="Actions">
       <div className="featureGrid5">
         {items.map((it) => (
-          <Link key={it.title} href={it.href} className="featureTile">
+          <Link
+            key={it.title}
+            href={it.href}
+            className="featureTile"
+            onClick={(event: MouseEvent<HTMLAnchorElement>) => {
+              if (it.href === "/vip-announcement" && onVipBenefitsClick) {
+                event.preventDefault();
+                onVipBenefitsClick();
+              }
+            }}
+          >
             <span className="featureGlow" aria-hidden="true" />
             <span className="featureIcon">{it.icon()}</span>
             <span className="featureLabel">

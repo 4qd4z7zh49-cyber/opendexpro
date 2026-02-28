@@ -1127,15 +1127,15 @@ export default function TradePanel() {
   return (
     <div className="min-w-0 space-y-4">
       <div className="rounded-2xl border border-white/10 bg-neutral-950 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-gray-300">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-950">
           <span>Wallet Balance (USDT)</span>
-          <b className="shrink-0 text-white">{formatMoney(balance)}</b>
+          <b className="shrink-0 text-slate-950">{formatMoney(balance)}</b>
         </div>
-        <div className="mt-3 text-sm text-gray-300">Choose asset to trade</div>
+        <div className="mt-3 text-sm text-slate-950">Choose asset to trade</div>
         <select
           value={selectedAsset}
           onChange={(e) => setSelectedAsset(normalizeAsset(e.target.value))}
-          className="mt-2 w-full rounded-xl border border-neutral-800 bg-neutral-900 p-3 text-white outline-none focus:ring-2 focus:ring-blue-500/30"
+          className="mt-2 w-full rounded-xl border border-neutral-800 bg-neutral-900 p-3 text-slate-950 outline-none focus:ring-2 focus:ring-blue-500/30"
         >
           {TRADE_ASSETS.map((asset) => (
             <option key={asset} value={asset}>
@@ -1147,11 +1147,11 @@ export default function TradePanel() {
       </div>
 
       <div className="rounded-2xl border border-white/10 bg-neutral-950 p-4">
-        <div className="mb-2 text-sm text-gray-300">Choose your quantity</div>
+        <div className="mb-2 text-sm text-slate-950">Choose your quantity</div>
         <select
           value={tierId}
           onChange={(e) => onTierChange(e.target.value)}
-          className="mb-3 w-full rounded-xl border border-neutral-800 bg-neutral-900 p-3 text-white outline-none focus:ring-2 focus:ring-blue-500/30"
+          className="mb-3 w-full rounded-xl border border-neutral-800 bg-neutral-900 p-3 text-slate-950 outline-none focus:ring-2 focus:ring-blue-500/30"
         >
           {QUANTITY_TIERS.map((t) => (
             <option key={t.id} value={t.id}>
@@ -1160,14 +1160,14 @@ export default function TradePanel() {
           ))}
         </select>
 
-        <div className="mb-2 text-sm text-gray-300">Trade Amount (USDT)</div>
+        <div className="mb-2 text-sm text-slate-950">Trade Amount (USDT)</div>
         <div className="flex flex-wrap gap-2">
           <input
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             inputMode="decimal"
             placeholder="100"
-            className="min-w-0 flex-1 rounded-xl border border-neutral-800 bg-neutral-900 p-3 text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            className="min-w-0 flex-1 rounded-xl border border-neutral-800 bg-neutral-900 p-3 text-slate-950 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
           />
           <button
             type="button"
@@ -1181,12 +1181,12 @@ export default function TradePanel() {
                 )
               )
             }
-            className="shrink-0 rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-sm text-white/90"
+            className="shrink-0 rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-sm text-slate-950"
           >
             Max
           </button>
         </div>
-        <div className="mt-1 text-xs text-white/50">
+        <div className="mt-1 text-xs text-slate-900">
           Range: {selectedTier.min.toLocaleString()} - {selectedTier.max.toLocaleString()} USDT (
           {Math.round(selectedTier.pct * 100)}%)
         </div>
@@ -1223,14 +1223,14 @@ export default function TradePanel() {
           className="rounded-2xl border border-white/10 bg-neutral-950 p-4"
         >
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <div className="text-sm text-gray-300">
-              Session: <b className="text-white">{summary.side}</b>
+            <div className="text-sm text-slate-950">
+              Session: <b className="text-slate-950">{summary.side}</b>
             </div>
-            <div className="shrink-0 text-xs text-white/60">
+            <div className="shrink-0 text-xs text-slate-900">
               Amount: {formatMoney(summary.amountUSDT)} USDT
             </div>
           </div>
-          <div className="mb-2 text-xs text-white/60">
+          <div className="mb-2 text-xs text-slate-900">
             Asset: {summary.asset}
             {" · "}
             Quantity: {summary.tierLabel} ({Math.round(summary.tierPct * 100)}%)
@@ -1239,7 +1239,7 @@ export default function TradePanel() {
           <MiniLineChart points={session.points} side={session.side} />
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
-            <span className="text-gray-300">Live Profit</span>
+            <span className="text-slate-950">Live Profit</span>
             <span className={`shrink-0 font-bold ${summary.profitClass}`}>
               {summary.currentProfitUSDT >= 0 ? "+" : ""}
               {formatMoney(summary.currentProfitUSDT)} USDT
@@ -1247,7 +1247,7 @@ export default function TradePanel() {
           </div>
 
           {sessionPhase === "RUNNING" ? (
-            <div className="mt-1 text-xs text-white/60">
+            <div className="mt-1 text-xs text-slate-900">
               Running... {summary.remainingSec}s remaining
             </div>
           ) : null}
@@ -1261,9 +1261,9 @@ export default function TradePanel() {
       )}
 
       <div className="rounded-2xl border border-white/10 bg-black p-3">
-        <div className="mb-3 text-sm font-semibold text-white">Order History</div>
+        <div className="mb-3 text-sm font-semibold text-slate-950">Order History</div>
         {history.length === 0 ? (
-          <div className="rounded-xl border border-white/10 bg-neutral-900 p-3 text-sm text-white/60">
+          <div className="rounded-xl border border-white/10 bg-neutral-900 p-3 text-sm text-slate-900">
             No trade history yet.
           </div>
         ) : (
@@ -1273,7 +1273,7 @@ export default function TradePanel() {
                 key={h.id}
                 className="rounded-xl border border-white/10 bg-neutral-900 px-3 py-2 text-xs"
               >
-                <div className="flex flex-wrap items-center justify-between gap-1 text-white/90">
+                <div className="flex flex-wrap items-center justify-between gap-1 text-slate-950">
                   <span className="min-w-0 break-words pr-2">
                     {h.side} · {h.asset ?? "BTC"} · {formatMoney(h.amountUSDT)} USDT
                   </span>
@@ -1284,7 +1284,7 @@ export default function TradePanel() {
                     {formatMoney(h.profitUSDT)} USDT
                   </span>
                 </div>
-                <div className="mt-1 text-white/50">
+                <div className="mt-1 text-slate-900">
                   Settled at {new Date(h.claimedAt).toLocaleString()}
                 </div>
               </div>

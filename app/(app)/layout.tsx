@@ -19,9 +19,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col overflow-x-hidden bg-black text-white">
+    <div className="platform-frontend min-h-screen flex flex-col overflow-x-hidden text-slate-900">
+      <div className="platform-frontend__aurora" aria-hidden />
       <OneSignalBootstrap />
-      <main className="flex-1 overflow-x-hidden pb-20">{children}</main>
+      <main className="platform-frontend__main flex-1 overflow-x-hidden pb-20">{children}</main>
       <BottomNav />
     </div>
   );

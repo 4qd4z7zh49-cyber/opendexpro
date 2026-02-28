@@ -1,10 +1,11 @@
 "use client";
 
+import NextImage from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { getUserAuthHeaders } from "@/lib/clientAuth";
+import { getUserAccessToken, getUserAuthHeaders } from "@/lib/clientAuth";
 
 type Theme = "dark" | "light";
 
@@ -81,6 +82,22 @@ type TradeNotificationRow = {
 
 const TRADE_NOTI_KEY_PREFIX = "opendex.trade.notifications.v2";
 const NOTI_REFRESH_MS = 7_000;
+const SETTINGS_METADATA_KEY = "opendex_settings_v1";
+const VIP_LEVELS = [
+  { minBalance: 300_000, level: 5 },
+  { minBalance: 150_000, level: 4 },
+  { minBalance: 80_000, level: 3 },
+  { minBalance: 30_000, level: 2 },
+  { minBalance: 10_000, level: 1 },
+] as const;
+
+function normalizeAvatarImageDataUrl(raw: unknown) {
+  return typeof raw === "string" ? String(raw).slice(0, 400_000) : "";
+}
+
+function normalizeAvatarImageUrl(raw: unknown) {
+  return typeof raw === "string" ? String(raw).slice(0, 2_000) : "";
+}
 
 function fmtMoney(v: number) {
   return `$${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -214,6 +231,36 @@ function notificationStatusLabel(item: NotificationItem) {
   return item.status;
 }
 
+function getVipLevel(balance: number) {
+  for (const tier of VIP_LEVELS) {
+    if (balance >= tier.minBalance) return tier.level;
+  }
+  return 0;
+}
+
+function VipBadge({ level }: { level: number }) {
+  return (
+    <span className="hbVipBadge" data-vip-level={level} aria-label={`VIP Level ${level}`}>
+      <span className="hbVipBadgeIcon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" className="hbVipBadgeSvg">
+          <path
+            d="M5 18 3 8l4.5 3L12 4l4.5 7L21 8l-2 10Z"
+            fill="currentColor"
+            opacity="0.92"
+          />
+          <path
+            d="M7 20h10"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+        </svg>
+      </span>
+      <span className="hbVipBadgeText">VIP {level}</span>
+    </span>
+  );
+}
+
 export default function HomeBanner({
   theme,
   onToggleTheme,
@@ -225,6 +272,7 @@ export default function HomeBanner({
   const [holdings, setHoldings] = useState<Holdings>({});
   const [prices, setPrices] = useState<Record<string, number | null>>({ USDT: 1 });
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileAvatarImageDataUrl, setProfileAvatarImageDataUrl] = useState("");
   const [profileErr, setProfileErr] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
@@ -270,6 +318,24 @@ export default function HomeBanner({
         throw new Error(j?.error || "Failed to load profile");
       }
       setProfile(j.profile);
+      const token = await getUserAccessToken();
+      if (token) {
+        const { data: userData } = await supabase.auth.getUser(token);
+        const metadata =
+          userData?.user?.user_metadata && typeof userData.user.user_metadata === "object"
+            ? (userData.user.user_metadata as Record<string, unknown>)
+            : {};
+        const settings =
+          metadata[SETTINGS_METADATA_KEY] && typeof metadata[SETTINGS_METADATA_KEY] === "object"
+            ? (metadata[SETTINGS_METADATA_KEY] as Record<string, unknown>)
+            : {};
+        setProfileAvatarImageDataUrl(
+          normalizeAvatarImageUrl(settings.avatarImageUrl) ||
+            normalizeAvatarImageDataUrl(settings.avatarImageDataUrl)
+        );
+      } else {
+        setProfileAvatarImageDataUrl("");
+      }
       setProfileErr("");
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Failed to load profile";
@@ -442,6 +508,16 @@ export default function HomeBanner({
   }, [refreshProfile]);
 
   useEffect(() => {
+    const handleSettingsUpdated = () => {
+      void refreshProfile();
+    };
+    window.addEventListener("opendex:settings-updated", handleSettingsUpdated);
+    return () => {
+      window.removeEventListener("opendex:settings-updated", handleSettingsUpdated);
+    };
+  }, [refreshProfile]);
+
+  useEffect(() => {
     const run = () => {
       void refreshNotifications();
     };
@@ -473,6 +549,7 @@ export default function HomeBanner({
     () => notifications.filter((item) => item.status === "PENDING").length,
     [notifications]
   );
+  const vipLevel = useMemo(() => getVipLevel(totalBalance), [totalBalance]);
 
   return (
     <>
@@ -480,25 +557,36 @@ export default function HomeBanner({
         <div className="hbTopBar">
           <button
             type="button"
-            className="hbIconBtn"
+            className="hbIconBtn overflow-hidden p-0"
             aria-label="Profile"
             onClick={() => router.push("/settings")}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M20 21a8 8 0 0 0-16 0"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
+            {profileAvatarImageDataUrl ? (
+              <NextImage
+                src={profileAvatarImageDataUrl}
+                alt="Profile"
+                width={44}
+                height={44}
+                unoptimized
+                className="h-full w-full rounded-[inherit] object-cover"
               />
-              <path
-                d="M12 13a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            ) : (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M20 21a8 8 0 0 0-16 0"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M12 13a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
           </button>
 
           <div className="flex items-center gap-2">
@@ -561,7 +649,10 @@ export default function HomeBanner({
         <div className="hbText">
           <div className="hbSmall">Welcome back</div>
           <div className="hbTitleWrap">
-            <div className="hbTitle hbTitleMain">opendex</div>
+            <div className="hbTitleRow">
+              <div className="hbTitle hbTitleMain">opendex</div>
+              {vipLevel > 0 ? <VipBadge level={vipLevel} /> : null}
+            </div>
             <div className="hbBrandSub">AI-POWERED FINANCIAL EXPERIENCE</div>
           </div>
 
@@ -582,9 +673,11 @@ export default function HomeBanner({
             <span className="uppercase">{profileRole}</span>
           </div>
 
-          <div className="hbBalanceRow">
-            <div className="hbBalanceLabel">Total Balance</div>
-            <div className="hbBalanceValue">{fmtMoney(totalBalance)}</div>
+          <div className={`hbBalanceWrap${vipLevel > 0 ? " hbBalanceWrapVip" : ""}`}>
+            <div className="hbBalanceRow">
+              <div className="hbBalanceLabel">Total Balance</div>
+              <div className="hbBalanceValue">{fmtMoney(totalBalance)}</div>
+            </div>
           </div>
 
           <div className="hbActions">

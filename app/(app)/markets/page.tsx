@@ -93,7 +93,7 @@ function TradingViewQuotes({
         ? {
             width: "100%",
             height: 520,
-            colorTheme: "dark",
+            colorTheme: "light",
             isTransparent: true,
             locale: "en",
             showSymbolLogo: true,
@@ -114,7 +114,7 @@ function TradingViewQuotes({
         : {
             width: "100%",
             height: 520,
-            colorTheme: "dark",
+            colorTheme: "light",
             isTransparent: true,
             locale: "en",
             showSymbolLogo: true,
@@ -145,27 +145,29 @@ function TradingViewQuotes({
     <div
       style={{
         marginTop: 14,
-        borderRadius: 18,
+        borderRadius: 24,
         overflow: "hidden",
-        border: "1px solid rgba(255,255,255,.08)",
-        background: "rgba(255,255,255,.03)",
-        boxShadow: "0 16px 50px rgba(0,0,0,.55)",
+        border: "1px solid rgba(147,197,253,.55)",
+        background:
+          "linear-gradient(180deg, rgba(255,255,255,0.8), rgba(239,246,255,0.68))",
+        boxShadow: "0 20px 55px rgba(82,132,198,0.16)",
+        backdropFilter: "blur(22px)",
       }}
     >
       <div
         style={{
           padding: "12px 12px",
-          borderBottom: "1px solid rgba(255,255,255,.06)",
+          borderBottom: "1px solid rgba(147,197,253,.42)",
           display: "flex",
           alignItems: "baseline",
           justifyContent: "space-between",
           gap: 10,
         }}
       >
-        <div style={{ fontWeight: 900, fontSize: 15 }}>
+        <div style={{ fontWeight: 900, fontSize: 15, color: "#0f172a" }}>
           {kind === "commodities" ? "Commodities" : "Stocks"}
         </div>
-        <div style={{ opacity: 0.7, fontSize: 12 }}>Live</div>
+        <div style={{ color: "#0369a1", fontSize: 12, fontWeight: 700 }}>Live</div>
       </div>
 
       <div id={id} />
@@ -260,7 +262,14 @@ export default function MarketsPage() {
   const sortDisabled = category !== "crypto";
 
   return (
-    <div style={{ padding: 16, maxWidth: 980, margin: "0 auto" }}>
+    <div
+      style={{
+        padding: 16,
+        maxWidth: 980,
+        margin: "0 auto",
+        color: "#0f172a",
+      }}
+    >
       {/* Header */}
       <div
         style={{
@@ -272,13 +281,13 @@ export default function MarketsPage() {
         }}
       >
         <div>
-          <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.02em" }}>
+          <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-0.03em", color: "#0f172a" }}>
             Markets
           </div>
-          <div style={{ opacity: 0.75, marginTop: 4 }}>Live market overview</div>
+          <div style={{ color: "rgba(15,23,42,.62)", marginTop: 4 }}>Live market overview</div>
         </div>
 
-        <div style={{ opacity: 0.75, fontSize: 13 }}>
+        <div style={{ color: "rgba(14,116,144,.8)", fontSize: 13, fontWeight: 700 }}>
           {category === "crypto" ? (loading ? "Updating…" : "Live") : "Live"}
         </div>
       </div>
@@ -294,12 +303,14 @@ export default function MarketsPage() {
             flex: "1 1 220px",
             minWidth: 0,
             height: 48,
-            borderRadius: 16,
-            border: "1px solid rgba(255,255,255,.10)",
-            background: "rgba(255,255,255,.04)",
-            color: "white",
+            borderRadius: 18,
+            border: "1px solid rgba(147,197,253,.55)",
+            background: "rgba(255,255,255,.74)",
+            color: "#0f172a",
             padding: "0 14px",
             outline: "none",
+            backdropFilter: "blur(16px)",
+            boxShadow: "0 14px 34px rgba(82,132,198,0.1)",
             opacity: sortDisabled ? 0.6 : 1,
           }}
         />
@@ -312,12 +323,14 @@ export default function MarketsPage() {
             flex: "1 1 180px",
             minWidth: 0,
             height: 48,
-            borderRadius: 16,
-            border: "1px solid rgba(255,255,255,.10)",
-            background: "rgba(255,255,255,.04)",
-            color: "white",
+            borderRadius: 18,
+            border: "1px solid rgba(147,197,253,.55)",
+            background: "rgba(255,255,255,.74)",
+            color: "#0f172a",
             padding: "0 12px",
             outline: "none",
+            backdropFilter: "blur(16px)",
+            boxShadow: "0 14px 34px rgba(82,132,198,0.1)",
             opacity: sortDisabled ? 0.6 : 1,
           }}
         >
@@ -346,11 +359,14 @@ export default function MarketsPage() {
                 height: 40,
                 padding: "0 14px",
                 borderRadius: 999,
-                border: "1px solid rgba(255,255,255,.10)",
-                background: active ? "rgba(59,130,246,.22)" : "rgba(255,255,255,.04)",
-                color: "white",
+                border: "1px solid rgba(147,197,253,.55)",
+                background: active
+                  ? "linear-gradient(135deg, rgba(96,165,250,.25), rgba(255,255,255,.78))"
+                  : "rgba(255,255,255,.62)",
+                color: active ? "#0c4a6e" : "#334155",
                 fontWeight: 800,
                 whiteSpace: "nowrap",
+                boxShadow: active ? "0 10px 26px rgba(82,132,198,0.14)" : "none",
               }}
             >
               {label}
@@ -365,10 +381,10 @@ export default function MarketsPage() {
     style={{
       marginTop: 12,
       borderRadius: 14,
-      border: "1px solid rgba(255,255,255,.10)",
-      background: "rgba(255,255,255,.04)",
+      border: "1px solid rgba(251,191,36,.4)",
+      background: "rgba(254,249,195,.72)",
       padding: 12,
-      color: "rgba(255,255,255,.80)",
+      color: "#854d0e",
       fontWeight: 800,
       fontSize: 13,
     }}
@@ -399,9 +415,15 @@ export default function MarketsPage() {
                   gap: 12,
                   alignItems: "center",
                   textDecoration: "none",
-                  color: "white",
-                  padding: "12px 10px",
-                  borderBottom: "1px solid rgba(255,255,255,.07)",
+                  color: "#0f172a",
+                  padding: "14px 14px",
+                  border: "1px solid rgba(147,197,253,.42)",
+                  borderRadius: 22,
+                  marginBottom: 10,
+                  background:
+                    "linear-gradient(180deg, rgba(255,255,255,0.78), rgba(239,246,255,0.65))",
+                  boxShadow: "0 16px 40px rgba(82,132,198,0.1)",
+                  backdropFilter: "blur(18px)",
                 }}
               >
                 {c.image ? (
@@ -414,8 +436,8 @@ export default function MarketsPage() {
                       height={44}
                       style={{
                         borderRadius: 16,
-                        background: "rgba(255,255,255,.06)",
-                        border: "1px solid rgba(255,255,255,.08)",
+                        background: "rgba(255,255,255,.86)",
+                        border: "1px solid rgba(147,197,253,.45)",
                       }}
                     />
                   </>
@@ -428,8 +450,8 @@ export default function MarketsPage() {
                       borderRadius: 16,
                       display: "grid",
                       placeItems: "center",
-                      background: "rgba(255,255,255,.06)",
-                      border: "1px solid rgba(255,255,255,.08)",
+                      background: "rgba(255,255,255,.86)",
+                      border: "1px solid rgba(147,197,253,.45)",
                       fontWeight: 900,
                     }}
                   >
@@ -442,7 +464,7 @@ export default function MarketsPage() {
                     <div style={{ fontWeight: 900 }}>{c.symbol.toUpperCase()}</div>
                     <div
                       style={{
-                        opacity: 0.72,
+                        color: "rgba(51,65,85,.72)",
                         fontSize: 13,
                         overflow: "hidden",
                         textOverflow: "ellipsis",
@@ -453,24 +475,27 @@ export default function MarketsPage() {
                     </div>
                   </div>
 
-                  <div style={{ opacity: 0.70, fontSize: 12, marginTop: 2 }}>
+                  <div style={{ color: "rgba(71,85,105,.8)", fontSize: 12, marginTop: 2 }}>
                     MCap {c.market_cap ? `$${fmtBig(c.market_cap)}` : "—"} · Vol{" "}
                     {c.total_volume ? `$${fmtBig(c.total_volume)}` : "—"}
                   </div>
                 </div>
 
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontWeight: 900 }}>${fmtUSD(c.current_price)}</div>
+                  <div style={{ fontWeight: 900, color: "#0f172a" }}>${fmtUSD(c.current_price)}</div>
                   <div
                     style={{
                       marginTop: 4,
                       display: "inline-block",
                       padding: "4px 10px",
                       borderRadius: 999,
-                      background: up ? "rgba(0,200,120,.18)" : "rgba(220,60,60,.18)",
-                      border: "1px solid rgba(255,255,255,.08)",
+                      background: up ? "rgba(16,185,129,.14)" : "rgba(244,63,94,.12)",
+                      border: up
+                        ? "1px solid rgba(16,185,129,.24)"
+                        : "1px solid rgba(244,63,94,.22)",
                       fontWeight: 800,
                       fontSize: 12,
+                      color: up ? "#047857" : "#be123c",
                     }}
                   >
                     {c.price_change_percentage_24h == null

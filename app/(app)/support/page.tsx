@@ -309,7 +309,7 @@ export default function SupportPage() {
       label: open ? "Active" : "Closed",
       className: open
         ? "border-emerald-300/30 bg-emerald-500/10 text-emerald-200"
-        : "border-white/15 bg-white/[0.05] text-white/70",
+        : "border-slate-300/60 bg-white/70 text-slate-600",
     };
   }, [thread?.status]);
 
@@ -353,7 +353,7 @@ export default function SupportPage() {
               ref={bodyRef}
               onWheelCapture={(e) => e.stopPropagation()}
               onTouchMoveCapture={(e) => e.stopPropagation()}
-              className="h-[58dvh] min-h-[340px] space-y-3 overflow-y-auto overscroll-y-contain rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(30,64,175,0.2),_rgba(8,12,20,0.95)_45%,_rgba(2,6,23,0.98)_100%)] p-2.5 touch-pan-y sm:h-[56dvh] sm:p-4"
+              className="h-[58dvh] min-h-[340px] space-y-3 overflow-y-auto overscroll-y-contain rounded-2xl border border-sky-200/70 bg-[radial-gradient(circle_at_top,_rgba(147,197,253,0.35),_rgba(255,255,255,0.94)_40%,_rgba(239,246,255,0.96)_100%)] p-2.5 touch-pan-y shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] sm:h-[56dvh] sm:p-4"
               style={{
                 WebkitOverflowScrolling: "touch",
                 overscrollBehaviorY: "contain",
@@ -476,7 +476,7 @@ export default function SupportPage() {
       >
         <div
           ref={composerRef}
-          className="mx-auto w-full max-w-[960px] rounded-3xl border border-white/15 bg-[linear-gradient(180deg,rgba(10,14,24,0.96),rgba(8,12,20,0.94))] p-3 shadow-[0_-12px_34px_rgba(0,0,0,0.5),0_0_0_1px_rgba(59,130,246,0.12)_inset] backdrop-blur-2xl sm:p-3.5"
+          className="mx-auto w-full max-w-[960px] rounded-3xl border border-sky-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.86),rgba(239,246,255,0.78))] p-3 shadow-[0_-12px_34px_rgba(82,132,198,0.16),0_0_0_1px_rgba(255,255,255,0.7)_inset] backdrop-blur-2xl sm:p-3.5"
         >
           <input
             ref={fileRef}
@@ -512,7 +512,7 @@ export default function SupportPage() {
             </div>
           ) : null}
 
-          <div className="flex items-center gap-2 rounded-2xl border border-white/12 bg-[linear-gradient(180deg,rgba(3,6,16,0.84),rgba(2,4,12,0.9))] px-2 py-2">
+          <div className="flex items-center gap-2 rounded-2xl border border-sky-200/70 bg-white/75 px-2 py-2">
             <button
               type="button"
               onClick={onPickPhoto}

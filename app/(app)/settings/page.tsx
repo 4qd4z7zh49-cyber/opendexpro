@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
+import NextImage from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getUserAccessToken, getUserAuthHeaders } from "@/lib/clientAuth";
 import {
   isOneSignalConfigured,
@@ -38,6 +38,10 @@ type ProfileResp = {
 };
 
 type AppSettings = {
+  avatarPreset: number;
+  avatarImageDataUrl: string;
+  avatarImageUrl: string;
+  avatarStoragePath: string;
   language: LanguageCode;
   notifications: {
     mailNotify: boolean;
@@ -64,6 +68,10 @@ const LANGUAGE_OPTIONS: Array<{ value: LanguageCode; label: string }> = [
 ];
 
 const DEFAULT_SETTINGS: AppSettings = {
+  avatarPreset: 0,
+  avatarImageDataUrl: "",
+  avatarImageUrl: "",
+  avatarStoragePath: "",
   language: "en",
   notifications: {
     mailNotify: true,
@@ -83,6 +91,71 @@ const DEFAULT_SETTINGS: AppSettings = {
     },
   },
 };
+
+const AVATAR_PRESETS = [
+  {
+    shellClass:
+      "bg-[linear-gradient(135deg,rgba(14,165,233,0.96),rgba(37,99,235,0.92))]",
+    glowClass: "shadow-[0_18px_35px_rgba(37,99,235,0.22)]",
+  },
+  {
+    shellClass:
+      "bg-[linear-gradient(135deg,rgba(56,189,248,0.94),rgba(14,116,144,0.92))]",
+    glowClass: "shadow-[0_18px_35px_rgba(14,116,144,0.2)]",
+  },
+  {
+    shellClass:
+      "bg-[linear-gradient(135deg,rgba(96,165,250,0.94),rgba(59,130,246,0.88))]",
+    glowClass: "shadow-[0_18px_35px_rgba(59,130,246,0.2)]",
+  },
+  {
+    shellClass:
+      "bg-[linear-gradient(135deg,rgba(125,211,252,0.94),rgba(29,78,216,0.88))]",
+    glowClass: "shadow-[0_18px_35px_rgba(29,78,216,0.18)]",
+  },
+] as const;
+
+function getAvatarInitials(name?: string | null) {
+  const raw = String(name || "").trim();
+  if (!raw) return "OD";
+  const parts = raw.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
+}
+
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Failed to read image"));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function fileToAvatarDataUrl(file: File, size = 160) {
+  const src = await readFileAsDataUrl(file);
+  const image = new window.Image();
+  await new Promise<void>((resolve, reject) => {
+    image.onload = () => resolve();
+    image.onerror = () => reject(new Error("Failed to load image"));
+    image.src = src;
+  });
+
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Failed to process image");
+
+  const side = Math.min(image.naturalWidth, image.naturalHeight);
+  const sx = Math.max(0, (image.naturalWidth - side) / 2);
+  const sy = Math.max(0, (image.naturalHeight - side) / 2);
+
+  ctx.clearRect(0, 0, size, size);
+  ctx.drawImage(image, sx, sy, side, side, 0, 0, size, size);
+
+  return canvas.toDataURL("image/jpeg", 0.84);
+}
 
 function fmtDateTime(value?: string | null) {
   if (!value) return "-";
@@ -112,8 +185,23 @@ function normalizeSettings(raw: unknown): AppSettings {
 
   const defaultAsset = String(safety.defaultAsset || "").toUpperCase();
   const normalizedAsset = ASSETS.includes(defaultAsset as Asset) ? (defaultAsset as Asset) : "USDT";
+  const avatarPresetRaw = Number(next.avatarPreset);
+  const avatarPreset =
+    Number.isInteger(avatarPresetRaw) && avatarPresetRaw >= 0 && avatarPresetRaw < AVATAR_PRESETS.length
+      ? avatarPresetRaw
+      : DEFAULT_SETTINGS.avatarPreset;
+  const avatarImageDataUrl =
+    typeof next.avatarImageDataUrl === "string" ? String(next.avatarImageDataUrl).slice(0, 400_000) : "";
+  const avatarImageUrl =
+    typeof next.avatarImageUrl === "string" ? String(next.avatarImageUrl).slice(0, 2_000) : "";
+  const avatarStoragePath =
+    typeof next.avatarStoragePath === "string" ? String(next.avatarStoragePath).slice(0, 280) : "";
 
   return {
+    avatarPreset,
+    avatarImageDataUrl,
+    avatarImageUrl,
+    avatarStoragePath,
     language: normalizeLanguage(next.language),
     notifications: {
       mailNotify:
@@ -147,8 +235,9 @@ function normalizeSettings(raw: unknown): AppSettings {
 export default function SettingsPage() {
   const router = useRouter();
   const redirectedRef = useRef(false);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [theme, setTheme] = useState<Theme>("light");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -156,6 +245,13 @@ export default function SettingsPage() {
   const [username, setUsername] = useState("");
   const [phone, setPhone] = useState("");
   const [country, setCountry] = useState("");
+  const [accountAvatarPreset, setAccountAvatarPreset] = useState(DEFAULT_SETTINGS.avatarPreset);
+  const [accountAvatarImageDataUrl, setAccountAvatarImageDataUrl] = useState("");
+  const [accountAvatarImageUrl, setAccountAvatarImageUrl] = useState(DEFAULT_SETTINGS.avatarImageUrl);
+  const [accountAvatarStoragePath, setAccountAvatarStoragePath] = useState(
+    DEFAULT_SETTINGS.avatarStoragePath
+  );
+  const [accountEditOpen, setAccountEditOpen] = useState(false);
   const [savingAccount, setSavingAccount] = useState(false);
   const [accountInfo, setAccountInfo] = useState("");
 
@@ -171,7 +267,6 @@ export default function SettingsPage() {
   const [securityInfo, setSecurityInfo] = useState("");
 
   const [logoutLoading, setLogoutLoading] = useState(false);
-  const [logoutAllLoading, setLogoutAllLoading] = useState(false);
   const [pushState, setPushState] = useState<OneSignalPushState>({
     configured: isOneSignalConfigured(),
     supported: false,
@@ -182,11 +277,17 @@ export default function SettingsPage() {
   const [pushLoading, setPushLoading] = useState(false);
 
   const isLight = theme === "light";
+  const avatarPreset = useMemo(
+    () => AVATAR_PRESETS[accountAvatarPreset] || AVATAR_PRESETS[0],
+    [accountAvatarPreset]
+  );
+  const avatarInitials = useMemo(() => getAvatarInitials(profile?.username), [profile?.username]);
+  const accountAvatarPreview = accountAvatarImageDataUrl || accountAvatarImageUrl || "";
 
   useEffect(() => {
     const readTheme = () => {
       const v = document.documentElement.getAttribute("data-ob-theme");
-      setTheme(v === "light" ? "light" : "dark");
+      setTheme(v === "dark" ? "dark" : "light");
     };
 
     readTheme();
@@ -231,7 +332,12 @@ export default function SettingsPage() {
         userData.user.user_metadata && typeof userData.user.user_metadata === "object"
           ? (userData.user.user_metadata as Record<string, unknown>)
           : {};
-      setSettings(normalizeSettings(metadata[SETTINGS_METADATA_KEY]));
+      const normalizedSettings = normalizeSettings(metadata[SETTINGS_METADATA_KEY]);
+      setSettings(normalizedSettings);
+      setAccountAvatarPreset(normalizedSettings.avatarPreset);
+      setAccountAvatarImageDataUrl("");
+      setAccountAvatarImageUrl(normalizedSettings.avatarImageUrl || normalizedSettings.avatarImageDataUrl);
+      setAccountAvatarStoragePath(normalizedSettings.avatarStoragePath);
 
       if (isOneSignalConfigured()) {
         try {
@@ -313,11 +419,63 @@ export default function SettingsPage() {
         throw new Error(json?.error || "Failed to save account");
       }
 
+      let nextAvatarImageUrl = accountAvatarImageUrl;
+      let nextAvatarStoragePath = accountAvatarStoragePath;
+      if (accountAvatarImageDataUrl) {
+        const avatarRes = await fetch("/api/profile/avatar", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ imageDataUrl: accountAvatarImageDataUrl }),
+        });
+        const avatarJson = (await avatarRes.json().catch(() => ({}))) as {
+          ok?: boolean;
+          error?: string;
+          publicUrl?: string;
+          storagePath?: string;
+        };
+        if (!avatarRes.ok || !avatarJson.ok || !avatarJson.publicUrl || !avatarJson.storagePath) {
+          throw new Error(avatarJson.error || "Failed to upload profile photo");
+        }
+        nextAvatarImageUrl = avatarJson.publicUrl;
+        nextAvatarStoragePath = avatarJson.storagePath;
+      } else if (!accountAvatarImageUrl && accountAvatarStoragePath) {
+        const deleteRes = await fetch("/api/profile/avatar", {
+          method: "DELETE",
+          headers,
+        });
+        const deleteJson = (await deleteRes.json().catch(() => ({}))) as {
+          ok?: boolean;
+          error?: string;
+        };
+        if (!deleteRes.ok || !deleteJson.ok) {
+          throw new Error(deleteJson.error || "Failed to remove profile photo");
+        }
+        nextAvatarImageUrl = "";
+        nextAvatarStoragePath = "";
+      }
+
+      const nextSettings = {
+        ...settings,
+        avatarPreset: accountAvatarPreset,
+        avatarImageDataUrl: "",
+        avatarImageUrl: nextAvatarImageUrl,
+        avatarStoragePath: nextAvatarStoragePath,
+      };
+      await persistMetadata(nextSettings);
+      setSettings(nextSettings);
+      setAccountAvatarImageDataUrl("");
+      setAccountAvatarImageUrl(nextAvatarImageUrl);
+      setAccountAvatarStoragePath(nextAvatarStoragePath);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("opendex:settings-updated"));
+      }
+
       setProfile((prev) => ({
         ...(prev || json.profile!),
         ...json.profile,
         email: json.profile?.email || prev?.email || null,
       }));
+      setAccountEditOpen(false);
       setAccountInfo("Account updated.");
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Failed to save account";
@@ -325,6 +483,78 @@ export default function SettingsPage() {
     } finally {
       setSavingAccount(false);
     }
+  };
+
+  const resetAccountDraft = useCallback(() => {
+    setUsername(String(profile?.username || ""));
+    setPhone(String(profile?.phone || ""));
+    setCountry(String(profile?.country || ""));
+    setAccountAvatarPreset(settings.avatarPreset);
+    setAccountAvatarImageDataUrl("");
+    setAccountAvatarImageUrl(settings.avatarImageUrl || settings.avatarImageDataUrl);
+    setAccountAvatarStoragePath(settings.avatarStoragePath);
+    if (avatarInputRef.current) {
+      avatarInputRef.current.value = "";
+    }
+  }, [
+    profile?.country,
+    profile?.phone,
+    profile?.username,
+    settings.avatarImageDataUrl,
+    settings.avatarImageUrl,
+    settings.avatarPreset,
+    settings.avatarStoragePath,
+  ]);
+
+  const openAvatarPicker = () => {
+    avatarInputRef.current?.click();
+  };
+
+  const removeAvatarPhoto = () => {
+    setAccountInfo("Profile photo will be removed after saving.");
+    setAccountAvatarImageDataUrl("");
+    setAccountAvatarImageUrl("");
+    if (avatarInputRef.current) {
+      avatarInputRef.current.value = "";
+    }
+  };
+
+  const onAvatarFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      setError("");
+      setAccountInfo("");
+      if (!file.type.startsWith("image/")) {
+        throw new Error("Please choose an image file.");
+      }
+      if (file.size > 8 * 1024 * 1024) {
+        throw new Error("Image must be smaller than 8MB.");
+      }
+      const avatarDataUrl = await fileToAvatarDataUrl(file);
+      setAccountAvatarImageDataUrl(avatarDataUrl);
+      setAccountInfo("Profile photo ready. Save changes to apply.");
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to load image";
+      setError(message);
+    } finally {
+      if (event.target) {
+        event.target.value = "";
+      }
+    }
+  };
+
+  const toggleAccountEdit = () => {
+    if (!accountEditOpen) {
+      resetAccountDraft();
+      setAccountInfo("");
+    }
+    setAccountEditOpen((prev) => !prev);
+  };
+
+  const cancelAccountEdit = () => {
+    resetAccountDraft();
+    setAccountEditOpen(false);
   };
 
   const saveNotifications = async () => {
@@ -408,21 +638,12 @@ export default function SettingsPage() {
     }
   };
 
-  const logoutAllDevices = async () => {
-    const ok = window.confirm("Log out from all devices?");
-    if (!ok) return;
-    try {
-      setLogoutAllLoading(true);
-      setError("");
-      const { error: outErr } = await supabase.auth.signOut({ scope: "global" });
-      if (outErr) throw outErr;
-      router.replace("/login");
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : "Failed to log out all devices";
-      setError(message);
-    } finally {
-      setLogoutAllLoading(false);
+  const goBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+      return;
     }
+    router.push("/home");
   };
 
   const enablePhonePush = async () => {
@@ -467,35 +688,27 @@ export default function SettingsPage() {
   return (
     <div className="px-4 pt-5 pb-24">
       <div className="mx-auto w-full max-w-[900px] space-y-4">
-        <div className={`rounded-2xl border p-4 ${isLight ? "border-slate-300 bg-white" : "border-white/10 bg-white/5"}`}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <div className={`text-2xl font-bold ${isLight ? "text-slate-900" : "text-white"}`}>Settings</div>
-              <div className={`mt-1 text-sm ${isLight ? "text-slate-600" : "text-white/60"}`}>
-                Account, security, notification and wallet safety controls.
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => void logoutCurrentDevice()}
-                disabled={logoutLoading}
-                className="inline-flex items-center justify-center rounded-xl bg-rose-600 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {logoutLoading ? "Logging out..." : "Log out"}
-              </button>
-              <Link
-                href="/home"
-                className={`inline-flex items-center justify-center rounded-xl border px-3 py-2 text-xs font-semibold ${
-                  isLight
-                    ? "border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200"
-                    : "border-white/15 bg-white/10 text-white hover:bg-white/15"
-                }`}
-              >
-                Back Home
-              </Link>
-            </div>
-          </div>
+        <div className="flex items-center">
+          <button
+            type="button"
+            onClick={goBack}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+              isLight
+                ? "border-slate-300 bg-white/80 text-slate-800 hover:bg-white"
+                : "border-white/15 bg-white/10 text-white hover:bg-white/15"
+            }`}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M15 6 9 12l6 6"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Back
+          </button>
         </div>
 
         {error ? (
@@ -520,57 +733,210 @@ export default function SettingsPage() {
         {!loading ? (
           <>
             <section className={`rounded-2xl border p-4 ${isLight ? "border-slate-300 bg-white" : "border-white/10 bg-white/5"}`}>
-              <h2 className={`text-lg font-semibold ${isLight ? "text-slate-900" : "text-white"}`}>1. Account</h2>
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
-                <label className="text-sm">
-                  <span className={isLight ? "text-slate-600" : "text-white/70"}>Username</span>
-                  <input
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className={`mt-1 w-full rounded-xl border px-3 py-2 outline-none ${
-                      isLight ? "border-slate-300 bg-white text-slate-900" : "border-white/15 bg-black/30 text-white"
-                    }`}
-                  />
-                </label>
-                <label className="text-sm">
-                  <span className={isLight ? "text-slate-600" : "text-white/70"}>Email (read-only)</span>
-                  <input
-                    disabled
-                    value={profile?.email || ""}
-                    className={`mt-1 w-full rounded-xl border px-3 py-2 ${
-                      isLight ? "border-slate-300 bg-slate-100 text-slate-700" : "border-white/10 bg-white/10 text-white/70"
-                    }`}
-                  />
-                </label>
-                <label className="text-sm">
-                  <span className={isLight ? "text-slate-600" : "text-white/70"}>Phone</span>
-                  <input
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className={`mt-1 w-full rounded-xl border px-3 py-2 outline-none ${
-                      isLight ? "border-slate-300 bg-white text-slate-900" : "border-white/15 bg-black/30 text-white"
-                    }`}
-                  />
-                </label>
-                <label className="text-sm">
-                  <span className={isLight ? "text-slate-600" : "text-white/70"}>Country</span>
-                  <input
-                    value={country}
-                    onChange={(e) => setCountry(e.target.value.toUpperCase())}
-                    className={`mt-1 w-full rounded-xl border px-3 py-2 outline-none ${
-                      isLight ? "border-slate-300 bg-white text-slate-900" : "border-white/15 bg-black/30 text-white"
-                    }`}
-                  />
-                </label>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className={`text-lg font-semibold ${isLight ? "text-slate-900" : "text-white"}`}>1. Account</h2>
+                  <div className={isLight ? "mt-1 text-sm text-slate-500" : "mt-1 text-sm text-white/60"}>
+                    Profile information and preset avatar.
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {accountEditOpen ? (
+                    <button
+                      type="button"
+                      onClick={cancelAccountEdit}
+                      className={`inline-flex items-center justify-center rounded-xl border px-3 py-2 text-xs font-semibold ${
+                        isLight
+                          ? "border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200"
+                          : "border-white/15 bg-white/10 text-white hover:bg-white/15"
+                      }`}
+                    >
+                      Cancel
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={toggleAccountEdit}
+                    className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white"
+                  >
+                    {accountEditOpen ? "Close Edit" : "Edit"}
+                  </button>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => void saveAccount()}
-                disabled={savingAccount}
-                className="mt-4 inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {savingAccount ? "Saving..." : "Save Account"}
-              </button>
+
+              <div className="mt-4 grid gap-4 sm:grid-cols-[180px_minmax(0,1fr)] sm:items-start">
+                <div className="flex flex-col items-center text-center sm:pt-1">
+                  <div
+                    className={[
+                      "grid h-28 w-28 overflow-hidden rounded-full text-3xl font-bold text-white transition-transform duration-300",
+                      "shadow-[0_18px_38px_rgba(37,99,235,0.18)] ring-4",
+                      isLight ? "ring-white/80" : "ring-white/10",
+                      avatarPreset.shellClass,
+                      avatarPreset.glowClass,
+                    ].join(" ")}
+                  >
+                    {accountAvatarPreview ? (
+                      <NextImage
+                        src={accountAvatarPreview}
+                        alt="Profile avatar"
+                        width={112}
+                        height={112}
+                        unoptimized
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      avatarInitials
+                    )}
+                  </div>
+                  <div className={`mt-3 text-base font-semibold ${isLight ? "text-slate-900" : "text-white"}`}>
+                    {profile?.username || "User"}
+                  </div>
+                  <div className={isLight ? "mt-1 text-sm text-slate-500" : "mt-1 text-sm text-white/60"}>
+                    {accountAvatarPreview ? "Gallery photo" : "Preset avatar"}
+                  </div>
+                  {accountEditOpen ? (
+                    <>
+                      <input
+                        ref={avatarInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={(event) => {
+                          void onAvatarFileChange(event);
+                        }}
+                        className="hidden"
+                      />
+                      <div className="mt-4 flex w-full flex-wrap justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={openAvatarPicker}
+                          className={`inline-flex items-center justify-center rounded-xl border px-3 py-2 text-xs font-semibold ${
+                            isLight
+                              ? "border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
+                              : "border-white/15 bg-white/10 text-white hover:bg-white/15"
+                          }`}
+                        >
+                          Choose Photo
+                        </button>
+                        {accountAvatarPreview ? (
+                          <button
+                            type="button"
+                            onClick={removeAvatarPhoto}
+                            className={`inline-flex items-center justify-center rounded-xl border px-3 py-2 text-xs font-semibold ${
+                              isLight
+                                ? "border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100"
+                                : "border-rose-400/30 bg-rose-500/10 text-rose-200 hover:bg-rose-500/15"
+                            }`}
+                          >
+                            Remove Photo
+                          </button>
+                        ) : null}
+                      </div>
+                      <div className="mt-4 grid grid-cols-4 gap-2">
+                        {AVATAR_PRESETS.map((preset, index) => {
+                          const active = accountAvatarPreset === index;
+                          return (
+                            <button
+                              key={`avatar-preset-${index}`}
+                              type="button"
+                              onClick={() => setAccountAvatarPreset(index)}
+                              className={[
+                                "grid h-11 w-11 place-items-center rounded-full border text-xs font-semibold text-white transition-all duration-200",
+                                preset.shellClass,
+                                active
+                                  ? "scale-[1.06] border-white shadow-[0_14px_28px_rgba(37,99,235,0.24)]"
+                                  : "border-white/50 opacity-75 hover:opacity-100",
+                              ].join(" ")}
+                              aria-label={`Choose avatar preset ${index + 1}`}
+                            >
+                              {avatarInitials}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+
+                {!accountEditOpen ? (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {[
+                      { label: "Username", value: profile?.username || "-" },
+                      { label: "Email", value: profile?.email || "-" },
+                      { label: "Phone", value: profile?.phone || "-" },
+                      { label: "Country", value: profile?.country || "-" },
+                    ].map((item) => (
+                      <div
+                        key={item.label}
+                        className={`rounded-2xl border px-4 py-3 ${
+                          isLight ? "border-slate-200 bg-slate-50/80" : "border-white/10 bg-white/5"
+                        }`}
+                      >
+                        <div className={isLight ? "text-xs uppercase tracking-wide text-slate-500" : "text-xs uppercase tracking-wide text-white/55"}>
+                          {item.label}
+                        </div>
+                        <div className={`mt-1.5 text-sm font-semibold ${isLight ? "text-slate-900" : "text-white"}`}>
+                          {item.value}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <label className="text-sm">
+                        <span className={isLight ? "text-slate-600" : "text-white/70"}>Username</span>
+                        <input
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                          className={`mt-1 w-full rounded-xl border px-3 py-2 outline-none ${
+                            isLight ? "border-slate-300 bg-white text-slate-900" : "border-white/15 bg-black/30 text-white"
+                          }`}
+                        />
+                      </label>
+                      <label className="text-sm">
+                        <span className={isLight ? "text-slate-600" : "text-white/70"}>Email (read-only)</span>
+                        <input
+                          disabled
+                          value={profile?.email || ""}
+                          className={`mt-1 w-full rounded-xl border px-3 py-2 ${
+                            isLight ? "border-slate-300 bg-slate-100 text-slate-700" : "border-white/10 bg-white/10 text-white/70"
+                          }`}
+                        />
+                      </label>
+                      <label className="text-sm">
+                        <span className={isLight ? "text-slate-600" : "text-white/70"}>Phone</span>
+                        <input
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          className={`mt-1 w-full rounded-xl border px-3 py-2 outline-none ${
+                            isLight ? "border-slate-300 bg-white text-slate-900" : "border-white/15 bg-black/30 text-white"
+                          }`}
+                        />
+                      </label>
+                      <label className="text-sm">
+                        <span className={isLight ? "text-slate-600" : "text-white/70"}>Country</span>
+                        <input
+                          value={country}
+                          onChange={(e) => setCountry(e.target.value.toUpperCase())}
+                          className={`mt-1 w-full rounded-xl border px-3 py-2 outline-none ${
+                            isLight ? "border-slate-300 bg-white text-slate-900" : "border-white/15 bg-black/30 text-white"
+                          }`}
+                        />
+                      </label>
+                    </div>
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => void saveAccount()}
+                        disabled={savingAccount}
+                        className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {savingAccount ? "Saving..." : "Save Changes"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </section>
 
             <section className={`rounded-2xl border p-4 ${isLight ? "border-slate-300 bg-white" : "border-white/10 bg-white/5"}`}>
@@ -620,14 +986,6 @@ export default function SettingsPage() {
                   className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {savingPassword ? "Updating..." : "Change Password"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void logoutAllDevices()}
-                  disabled={logoutAllLoading}
-                  className="inline-flex items-center justify-center rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {logoutAllLoading ? "Logging out..." : "Log out from all devices"}
                 </button>
               </div>
             </section>
@@ -855,6 +1213,25 @@ export default function SettingsPage() {
               >
                 {savingSafety ? "Saving..." : "Save Wallet & Safety"}
               </button>
+            </section>
+
+            <section className={`rounded-2xl border p-4 ${isLight ? "border-slate-300 bg-white" : "border-white/10 bg-white/5"}`}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className={`text-lg font-semibold ${isLight ? "text-slate-900" : "text-white"}`}>Log out</h2>
+                  <div className={isLight ? "mt-1 text-sm text-slate-500" : "mt-1 text-sm text-white/60"}>
+                    Sign out from this device.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void logoutCurrentDevice()}
+                  disabled={logoutLoading}
+                  className="inline-flex items-center justify-center rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {logoutLoading ? "Logging out..." : "Log out"}
+                </button>
+              </div>
             </section>
           </>
         ) : null}
