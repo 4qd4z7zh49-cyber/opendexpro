@@ -2,7 +2,7 @@
 
 import NextImage from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { getUserAccessToken, getUserAuthHeaders } from "@/lib/clientAuth";
@@ -269,6 +269,7 @@ export default function HomeBanner({
   onToggleTheme: () => void;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [holdings, setHoldings] = useState<Holdings>({});
   const [prices, setPrices] = useState<Record<string, number | null>>({ USDT: 1 });
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -530,6 +531,18 @@ export default function HomeBanner({
       window.clearInterval(t);
     };
   }, [refreshNotifications]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      setProfileOpen(false);
+      setNotificationOpen(false);
+      setSelectedNotification(null);
+      setLogoutErr("");
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [pathname]);
 
   const totalBalance = useMemo(() => {
     const entries = Object.entries(holdings);

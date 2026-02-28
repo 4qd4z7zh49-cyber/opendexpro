@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import HomeBanner from "@components/HomeBanner";
 import FeatureGrid from "@components/FeatureGrid";
 import HomeNewsSection from "@components/HomeNewsSection";
@@ -13,6 +14,7 @@ type HomeTheme = "dark" | "light";
 const THEME_KEY = "opendex.home.theme.v2";
 
 export default function HomePage() {
+  const pathname = usePathname();
   const [theme, setTheme] = useState<HomeTheme>(() => {
     if (typeof window === "undefined") return "light";
     try {
@@ -32,6 +34,15 @@ export default function HomePage() {
     }
     document.documentElement.setAttribute("data-ob-theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      setVipPromoOpen(false);
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [pathname]);
 
   return (
     <div className={`homeWrap ${theme === "light" ? "homeThemeLight" : "homeThemeDark"}`}>
