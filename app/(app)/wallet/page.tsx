@@ -549,7 +549,7 @@ export default function WalletPage() {
           ) : null}
 
           {exchangeInfo ? (
-            <div className="mt-3 rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-3 text-sm text-emerald-200">
+            <div className="mt-3 rounded-xl border border-emerald-300/70 bg-[linear-gradient(135deg,rgba(236,253,245,0.98),rgba(209,250,229,0.92))] p-3 text-sm font-medium text-emerald-900 shadow-[0_16px_34px_rgba(16,185,129,0.12)]">
               {exchangeInfo}
             </div>
           ) : null}

@@ -59,6 +59,7 @@ type TradeSession = {
   endAt: number;
   remainingSec: number;
   points: number[];
+  profitPoints: number[];
 };
 
 type HistoryRecord = {
@@ -113,10 +114,15 @@ const ANALYSIS_TEXTS = [
   "Collecting information across markets...",
   "Projecting trend and timing the move...",
 ];
-const RESULT_STAGE_TEXTS = [
+const RESULT_STAGE_TEXTS_PROFIT = [
   "Congratulations..",
   "Collecting your profit...",
   "Please wait to transfer money to your account",
+];
+const RESULT_STAGE_TEXTS_LOSS = [
+  "Sorry...",
+  "Settling your session result...",
+  "Please wait while the loss is applied to your wallet",
 ];
 const RESULT_REVEAL_DELAY_MS = 2400;
 const QUANTITY_TIERS: QuantityTier[] = [
@@ -171,6 +177,13 @@ function saveHistory(storageKey: string, next: HistoryRecord[]) {
   if (!storageKey) return;
   if (typeof window === "undefined") return;
   localStorage.setItem(storageKey, JSON.stringify(next));
+}
+
+function appendHistoryRecord(storageKey: string, next: HistoryRecord) {
+  if (!storageKey) return;
+  const rows = loadHistory(storageKey);
+  const deduped = [next, ...rows.filter((row) => row.id !== next.id)].slice(0, 200);
+  saveHistory(storageKey, deduped);
 }
 
 function tradeNotiKeyForUser(userId: string | null | undefined) {
@@ -254,6 +267,9 @@ function normalizeTradeSession(v: unknown): TradeSession | null {
   const points = Array.isArray(row.points)
     ? row.points.map((p) => Number(p)).filter((p) => Number.isFinite(p)).slice(-80)
     : [];
+  const profitPoints = Array.isArray(row.profitPoints)
+    ? row.profitPoints.map((p) => Number(p)).filter((p) => Number.isFinite(p)).slice(-80)
+    : [];
 
   return {
     id: String(row.id || crypto.randomUUID()),
@@ -271,6 +287,10 @@ function normalizeTradeSession(v: unknown): TradeSession | null {
     endAt,
     remainingSec: Math.max(0, Number(row.remainingSec ?? 0)),
     points: points.length > 1 ? points : [100, side === "BUY" ? 100.7 : 99.3],
+    profitPoints:
+      profitPoints.length > 1
+        ? profitPoints
+        : [0, Number.isFinite(Number(row.currentProfitUSDT ?? 0)) ? Number(row.currentProfitUSDT ?? 0) : 0],
   };
 }
 
@@ -410,17 +430,33 @@ async function adjustWalletUSDT(deltaUSDT: number) {
   return Number(json.balanceUSDT ?? 0);
 }
 
-function MiniLineChart({ points, side }: { points: number[]; side: Side }) {
+function MiniLineChart({
+  points,
+  profitPoints,
+  side,
+}: {
+  points: number[];
+  profitPoints: number[];
+  side: Side;
+}) {
   const width = 360;
   const height = 140;
   const safe = points.length > 1 ? points : [100, 100.2];
+  const safeProfits =
+    profitPoints.length === safe.length
+      ? profitPoints
+      : safe.map((_, index) => {
+          const ratio = safe.length <= 1 ? 0 : index / (safe.length - 1);
+          const end = Number(profitPoints[profitPoints.length - 1] ?? 0);
+          return round2(end * ratio);
+        });
   const min = Math.min(...safe);
   const max = Math.max(...safe);
   const range = Math.max(0.001, max - min);
   const coords = safe.map((v, i) => {
     const x = (i / (safe.length - 1)) * width;
     const y = height - ((v - min) / range) * height;
-    return { x, y };
+    return { x, y, profit: Number(safeProfits[i] ?? 0) };
   });
   const path = coords
     .map((p, idx) => `${idx === 0 ? "M" : "L"} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`)
@@ -431,6 +467,8 @@ function MiniLineChart({ points, side }: { points: number[]; side: Side }) {
   const stroke = side === "BUY" ? "#34d399" : "#f87171";
   const fillId = `sessionLineFill-${side.toLowerCase()}`;
   const glowId = `sessionLineGlow-${side.toLowerCase()}`;
+  const labelStep = Math.max(1, Math.floor((coords.length - 1) / 4));
+  const labelCoords = coords.filter((_, index) => index % labelStep === 0 || index === coords.length - 1);
 
   return (
     <svg
@@ -460,7 +498,8 @@ function MiniLineChart({ points, side }: { points: number[]; side: Side }) {
             y1={y}
             x2={width}
             y2={y}
-            stroke="rgba(255,255,255,.06)"
+            stroke="rgba(148,163,184,.22)"
+            strokeDasharray="4 6"
             strokeWidth="1"
           />
         );
@@ -474,7 +513,8 @@ function MiniLineChart({ points, side }: { points: number[]; side: Side }) {
             y1={0}
             x2={x}
             y2={height}
-            stroke="rgba(255,255,255,.04)"
+            stroke="rgba(148,163,184,.16)"
+            strokeDasharray="4 7"
             strokeWidth="1"
           />
         );
@@ -483,6 +523,71 @@ function MiniLineChart({ points, side }: { points: number[]; side: Side }) {
       <path d={areaPath} fill={`url(#${fillId})`} />
       <path d={path} fill="none" stroke={stroke} strokeWidth="6" strokeOpacity="0.22" />
       <path d={path} fill="none" stroke={stroke} strokeWidth="2.6" filter={`url(#${glowId})`} />
+
+      {labelCoords.map((point, index) => {
+        const label = `${point.profit >= 0 ? "+" : ""}${formatMoney(point.profit)}`;
+        const labelWidth = Math.max(64, 20 + label.length * 7);
+        const labelHeight = 22;
+        const x = Math.min(width - labelWidth - 4, Math.max(4, point.x - labelWidth / 2));
+        const y = point.y > 28 ? point.y - 28 : point.y + 10;
+        const lowOpacity = Math.max(0.18, 0.28 + index * 0.08);
+        const highOpacity = Math.min(0.92, lowOpacity + 0.32);
+
+        return (
+          <g key={`label-${index}`} transform={`translate(${x.toFixed(2)} ${y.toFixed(2)})`}>
+            <rect
+              width={labelWidth}
+              height={labelHeight}
+              rx="11"
+              fill="rgba(15,23,42,0.74)"
+              stroke={point.profit >= 0 ? "rgba(52,211,153,0.4)" : "rgba(248,113,113,0.42)"}
+              strokeWidth="1"
+            >
+              <animate
+                attributeName="opacity"
+                values={`${lowOpacity};${highOpacity};${lowOpacity}`}
+                dur="2.4s"
+                begin={`${index * 0.18}s`}
+                repeatCount="indefinite"
+              />
+            </rect>
+            <text
+              x={labelWidth / 2}
+              y="14"
+              textAnchor="middle"
+              fontSize="10"
+              fontWeight="700"
+              fill={point.profit >= 0 ? "#6ee7b7" : "#fda4af"}
+              letterSpacing="0.02em"
+            >
+              {label}
+              <animate
+                attributeName="opacity"
+                values={`${Math.min(1, lowOpacity + 0.1)};1;${Math.min(1, lowOpacity + 0.1)}`}
+                dur="2.4s"
+                begin={`${index * 0.18}s`}
+                repeatCount="indefinite"
+              />
+            </text>
+            <circle cx={labelWidth / 2} cy={labelHeight + 4} r="2.2" fill={stroke} opacity="0.85" />
+          </g>
+        );
+      })}
+
+      {coords
+        .filter((_, index) => index % labelStep === 0 || index === coords.length - 1)
+        .map((point, index) => (
+          <circle
+            key={`anchor-${index}`}
+            cx={point.x}
+            cy={point.y}
+            r="2.8"
+            fill="#ffffff"
+            stroke={stroke}
+            strokeWidth="1.8"
+            opacity="0.9"
+          />
+        ))}
 
       <circle cx={last.x} cy={last.y} r="8" fill={stroke} opacity="0.18" className="animate-pulse" />
       <circle cx={last.x} cy={last.y} r="4.2" fill={stroke} stroke="rgba(255,255,255,.8)" strokeWidth="1.1" />
@@ -493,6 +598,7 @@ function MiniLineChart({ points, side }: { points: number[]; side: Side }) {
 export default function TradePanel() {
   const router = useRouter();
   const redirectedRef = useRef(false);
+  const mountedRef = useRef(false);
   const [balance, setBalance] = useState(0);
   const [balanceErr, setBalanceErr] = useState("");
   const [selectedAsset, setSelectedAsset] = useState<TradeAsset>("BTC");
@@ -528,6 +634,7 @@ export default function TradePanel() {
     () => (resultModal ? resultModal.resultUSDT >= 0 : false),
     [resultModal]
   );
+  const resultStageTexts = resultModalIsProfit ? RESULT_STAGE_TEXTS_PROFIT : RESULT_STAGE_TEXTS_LOSS;
 
   const sessionBusy = sessionPhase === "ANALYZING" || sessionPhase === "RUNNING";
   const selectedTier = useMemo(
@@ -572,6 +679,13 @@ export default function TradePanel() {
       else setPermissionErr(message);
     }
   }, [router]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     const run = () => {
@@ -701,7 +815,7 @@ export default function TradePanel() {
         prev && prev.id === modalId
           ? {
               ...prev,
-              stageIndex: Math.min(prev.stageIndex + 1, RESULT_STAGE_TEXTS.length - 1),
+              stageIndex: Math.min(prev.stageIndex + 1, resultStageTexts.length - 1),
             }
           : prev
       );
@@ -715,7 +829,7 @@ export default function TradePanel() {
           ? {
               ...prev,
               revealResult: true,
-              stageIndex: RESULT_STAGE_TEXTS.length - 1,
+              stageIndex: resultStageTexts.length - 1,
             }
           : prev
       );
@@ -725,7 +839,7 @@ export default function TradePanel() {
       window.clearInterval(rotate);
       window.clearTimeout(reveal);
     };
-  }, [resultModalId, resultModalRevealResult]);
+  }, [resultModalId, resultModalRevealResult, resultStageTexts]);
 
   useEffect(() => {
     if (sessionPhase !== "ANALYZING") return;
@@ -789,15 +903,19 @@ export default function TradePanel() {
       const chartNoise = (Math.random() - 0.5) * 1.3;
       const point = Number((baseTrend + chartWave + chartNoise).toFixed(4));
 
+      const done = progress >= 1;
       const remainingSec = Math.max(0, Math.ceil((durationMs - elapsedMs) / 1000));
       const nextPoints = [...current.points.slice(-79), point];
-
-      const done = progress >= 1;
+      const nextProfitPoints = [
+        ...current.profitPoints.slice(-79),
+        done ? round2(current.targetProfitUSDT) : nextProfit,
+      ];
       const updated: TradeSession = {
         ...current,
         currentProfitUSDT: done ? round2(current.targetProfitUSDT) : nextProfit,
         remainingSec,
         points: nextPoints,
+        profitPoints: nextProfitPoints,
       };
 
       sessionRef.current = updated;
@@ -842,18 +960,17 @@ export default function TradePanel() {
     if (autoSettledLossSessionIdRef.current === session.id) return;
     autoSettledLossSessionIdRef.current = session.id;
 
-    let cancelled = false;
     const run = async () => {
-      setClaimLoading(true);
-      setActionErr("");
+      if (mountedRef.current) {
+        setClaimLoading(true);
+        setActionErr("");
+      }
       try {
         let nextBalance = balance;
         if (Math.abs(delta) >= 0.01) {
           nextBalance = await adjustWalletUSDT(delta);
         }
-        if (cancelled) return;
 
-        setBalance(nextBalance);
         const item: HistoryRecord = {
           id: session.id,
           side: session.side,
@@ -863,7 +980,7 @@ export default function TradePanel() {
           createdAt: session.createdAt,
           claimedAt: Date.now(),
         };
-        setHistory((prev) => [item, ...prev].slice(0, 200));
+        appendHistoryRecord(tradeHistoryStorageKey, item);
         upsertTradeNotification(tradeNotiStorageKey, {
           id: session.id,
           source: "TRADE",
@@ -875,42 +992,45 @@ export default function TradePanel() {
           createdAt: session.createdAt,
           updatedAt: Date.now(),
         });
-        setResultModal((prev) =>
-          prev && prev.id === session.id
-            ? { ...prev, settlementDone: true, settlementError: "" }
-            : prev
-        );
-
-        setSession(null);
         sessionRef.current = null;
-        setSessionPhase("IDLE");
+        savePersistedTradeSession(tradeSessionStorageKey, null);
+
+        if (mountedRef.current) {
+          setBalance(nextBalance);
+          setHistory((prev) => [item, ...prev.filter((row) => row.id !== item.id)].slice(0, 200));
+          setResultModal((prev) =>
+            prev && prev.id === session.id
+              ? { ...prev, settlementDone: true, settlementError: "" }
+              : prev
+          );
+          setSession(null);
+          setSessionPhase("IDLE");
+        }
       } catch (e: unknown) {
-        if (cancelled) return;
         const message = e instanceof Error ? e.message : "Auto settlement failed";
-        if (isUnauthorizedMessage(message) && !redirectedRef.current) {
+        if (mountedRef.current && isUnauthorizedMessage(message) && !redirectedRef.current) {
           redirectedRef.current = true;
           router.replace("/login?next=/trade");
           return;
         }
-        setActionErr(message);
-        setResultModal((prev) =>
-          prev && prev.id === session.id
-            ? { ...prev, settlementDone: false, settlementError: message }
-            : prev
-        );
-      } finally {
-        if (!cancelled) {
-          setClaimLoading(false);
-          autoSettledLossSessionIdRef.current = "";
+        if (mountedRef.current) {
+          setActionErr(message);
+          setResultModal((prev) =>
+            prev && prev.id === session.id
+              ? { ...prev, settlementDone: false, settlementError: message }
+              : prev
+          );
         }
+      } finally {
+        if (mountedRef.current) {
+          setClaimLoading(false);
+        }
+        autoSettledLossSessionIdRef.current = "";
       }
     };
 
     void run();
-    return () => {
-      cancelled = true;
-    };
-  }, [balance, router, session, sessionPhase, tradeNotiStorageKey]);
+  }, [balance, router, session, sessionPhase, tradeHistoryStorageKey, tradeNotiStorageKey, tradeSessionStorageKey]);
 
   const startSession = async (side: Side) => {
     setActionErr("");
@@ -991,6 +1111,7 @@ export default function TradePanel() {
       endAt,
       remainingSec: 40,
       points: [100, side === "BUY" ? 100.7 : 99.3],
+      profitPoints: [0, 0],
     };
 
     upsertTradeNotification(tradeNotiStorageKey, {
@@ -1121,6 +1242,10 @@ export default function TradePanel() {
       setActionErr("Please claim profit before closing.");
       return;
     }
+    if (resultModal.resultUSDT < 0 && !resultModal.settlementDone) {
+      setActionErr("Please wait while loss is settling.");
+      return;
+    }
     setResultModal(null);
   };
 
@@ -1236,7 +1361,7 @@ export default function TradePanel() {
             Quantity: {summary.tierLabel} ({Math.round(summary.tierPct * 100)}%)
           </div>
 
-          <MiniLineChart points={session.points} side={session.side} />
+          <MiniLineChart points={session.points} profitPoints={session.profitPoints} side={session.side} />
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
             <span className="text-slate-950">Live Profit</span>
@@ -1295,36 +1420,40 @@ export default function TradePanel() {
 
       {resultModal ? (
         <div className="fixed inset-0 z-[60] grid place-items-center bg-black/75 px-4 backdrop-blur-md">
-          <div className="w-full max-w-lg rounded-3xl border border-white/15 bg-[radial-gradient(circle_at_20%_10%,rgba(37,99,235,.25),transparent_45%),radial-gradient(circle_at_80%_80%,rgba(16,185,129,.18),transparent_45%),#06070c] p-5 shadow-[0_30px_120px_rgba(0,0,0,.72)]">
+          <div className="w-full max-w-lg rounded-3xl border border-sky-200/90 bg-[radial-gradient(circle_at_20%_10%,rgba(59,130,246,.18),transparent_45%),radial-gradient(circle_at_80%_80%,rgba(16,185,129,.14),transparent_45%),linear-gradient(180deg,rgba(248,252,255,.98),rgba(236,244,255,.96))] p-5 shadow-[0_28px_100px_rgba(15,23,42,.28)]">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="text-xs uppercase tracking-[0.18em] text-white/50">AI powered trade</div>
-                <div className="mt-2 text-xl font-semibold text-white">
+                <div className="text-xs uppercase tracking-[0.18em] text-sky-700/70">AI powered trade</div>
+                <div className="mt-2 text-xl font-semibold text-slate-950">
                   {resultModalIsProfit ? "Trade Completed" : "Trade Settled"}
                 </div>
               </div>
               <button
                 type="button"
                 onClick={closeResultModal}
-                className="rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 text-sm text-white/80 hover:bg-white/10"
+                className="rounded-xl border border-sky-200 bg-white/80 px-3 py-1.5 text-sm text-slate-700 shadow-sm hover:bg-white"
               >
                 Close
               </button>
             </div>
 
-            <div className="mt-4 rounded-2xl border border-white/10 bg-black/35 p-4">
+            <div className="mt-4 rounded-[28px] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,255,255,.96),rgba(239,246,255,.9))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.85),0_18px_36px_rgba(148,163,184,.18)]">
               {!resultModal.revealResult ? (
                 <div className="space-y-4">
-                  <div className="min-h-[52px] text-center text-lg font-semibold text-white transition-opacity duration-300">
-                    {RESULT_STAGE_TEXTS[resultModal.stageIndex]}
+                  <div className="min-h-[52px] text-center text-lg font-semibold text-slate-800 transition-opacity duration-300">
+                    {resultStageTexts[resultModal.stageIndex]}
                   </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-sky-100">
                     <div
-                      className="h-full bg-gradient-to-r from-blue-400/70 via-cyan-300/80 to-emerald-300/70 transition-[width] duration-500"
+                      className={`h-full transition-[width] duration-500 ${
+                        resultModalIsProfit
+                          ? "bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400"
+                          : "bg-gradient-to-r from-sky-500 via-amber-400 to-rose-400"
+                      }`}
                       style={{
                         width: `${Math.max(
                           20,
-                          ((resultModal.stageIndex + 1) / RESULT_STAGE_TEXTS.length) * 100
+                          ((resultModal.stageIndex + 1) / resultStageTexts.length) * 100
                         )}%`,
                       }}
                     />
@@ -1332,21 +1461,21 @@ export default function TradePanel() {
                 </div>
               ) : (
                 <div className="space-y-4 text-center">
-                  <div className="text-xs uppercase tracking-[0.2em] text-white/60">
+                  <div className="text-xs uppercase tracking-[0.2em] text-slate-500">
                     {resultModalIsProfit ? "Final Profit" : "Final Loss"}
                   </div>
                   <div
                     className={[
                       "text-5xl font-black tracking-tight",
-                      resultModal.resultUSDT >= 0 ? "text-emerald-300" : "text-rose-300",
+                      resultModal.resultUSDT >= 0 ? "text-emerald-500" : "text-rose-500",
                     ].join(" ")}
                   >
                     {resultModal.resultUSDT >= 0 ? "+" : ""}
                     {formatMoney(resultModal.resultUSDT)}
-                    <span className="ml-2 text-2xl font-semibold text-white/70">USDT</span>
+                    <span className="ml-2 text-2xl font-semibold text-slate-500">USDT</span>
                   </div>
 
-                  <div className="text-sm text-white/60">
+                  <div className="text-sm text-slate-500">
                     {resultModal.side} · {resultModal.asset} · {formatMoney(resultModal.amountUSDT)} USDT
                   </div>
                 </div>
@@ -1356,7 +1485,7 @@ export default function TradePanel() {
             {resultModal.revealResult ? (
               <div className="mt-4 space-y-3">
                 {resultModal.settlementError ? (
-                  <div className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+                  <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
                     {resultModal.settlementError}
                   </div>
                 ) : null}
@@ -1368,25 +1497,25 @@ export default function TradePanel() {
                         type="button"
                         onClick={claimProfit}
                         disabled={claimLoading}
-                        className="w-full rounded-xl bg-blue-600 px-4 py-3 text-base font-semibold text-white shadow-[0_12px_30px_rgba(37,99,235,.45)] disabled:opacity-60"
+                        className="w-full rounded-xl bg-blue-600 px-4 py-3 text-base font-semibold text-white shadow-[0_12px_30px_rgba(37,99,235,.28)] disabled:opacity-60"
                       >
                         {claimLoading ? "Claiming..." : "Claim Profit"}
                       </button>
                     ) : (
-                      <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-center text-sm text-emerald-200">
+                      <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-center text-sm text-emerald-700">
                         Profit transferred to your wallet successfully.
                       </div>
                     )}
                   </>
                 ) : (
                   <div className="space-y-2">
-                    <div className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-center text-sm text-rose-200">
+                    <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-center text-sm text-rose-700">
                       {resultModal.settlementDone ? "Loss has been deducted from wallet." : "Settling loss..."}
                     </div>
                     <button
                       type="button"
                       onClick={closeResultModal}
-                      className="w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-base font-semibold text-white hover:bg-white/15"
+                      className="w-full rounded-xl border border-sky-200 bg-white/85 px-4 py-3 text-base font-semibold text-slate-700 hover:bg-white"
                     >
                       Close
                     </button>
@@ -1399,19 +1528,19 @@ export default function TradePanel() {
       ) : null}
 
       {sessionPhase === "ANALYZING" ? (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 backdrop-blur-sm">
-          <div className="w-[92%] max-w-md rounded-2xl border border-white/15 bg-[#0b0b0f] p-5 shadow-[0_20px_70px_rgba(0,0,0,.65)]">
-            <div className="text-sm text-white/60">AI powered Trade Session</div>
+        <div className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-4">
+          <div className="w-full max-w-md rounded-[26px] border border-sky-200/90 bg-[radial-gradient(circle_at_top,rgba(96,165,250,.16),transparent_55%),linear-gradient(180deg,rgba(255,255,255,.97),rgba(239,246,255,.95))] p-5 shadow-[0_24px_60px_rgba(15,23,42,.22)]">
+            <div className="text-sm text-sky-700/70">AI powered Trade Session</div>
             <div
               className={[
-                "mt-3 text-lg font-semibold text-white transition-opacity duration-400",
+                "mt-3 text-lg font-semibold text-slate-900 transition-opacity duration-400",
                 analysisVisible ? "opacity-100" : "opacity-10",
               ].join(" ")}
             >
               {ANALYSIS_TEXTS[analysisIdx]}
             </div>
-            <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
-              <div className="h-full w-full animate-pulse bg-blue-500/80" />
+            <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-sky-100">
+              <div className="h-full w-full animate-pulse bg-gradient-to-r from-blue-500 via-cyan-400 to-sky-300" />
             </div>
           </div>
         </div>
