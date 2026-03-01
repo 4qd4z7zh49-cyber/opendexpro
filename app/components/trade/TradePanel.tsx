@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -428,6 +429,43 @@ async function adjustWalletUSDT(deltaUSDT: number) {
     throw new Error(json?.error || "Failed to update wallet");
   }
   return Number(json.balanceUSDT ?? 0);
+}
+
+async function recordTradeOrder({
+  id,
+  side,
+  asset,
+  amountUSDT,
+  profitUSDT,
+  createdAt,
+}: {
+  id: string;
+  side: Side;
+  asset: TradeAsset;
+  amountUSDT: number;
+  profitUSDT: number;
+  createdAt: number;
+}) {
+  try {
+    const tokenHeaders = await authHeaders();
+    await fetch("/api/trade/order", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...tokenHeaders,
+      },
+      body: JSON.stringify({
+        id,
+        side,
+        asset,
+        amountUSDT,
+        profitUSDT,
+        createdAt,
+      }),
+    });
+  } catch {
+    // Best-effort: trade UX should not fail if history logging fails.
+  }
 }
 
 function MiniLineChart({
@@ -992,6 +1030,14 @@ export default function TradePanel() {
           createdAt: session.createdAt,
           updatedAt: Date.now(),
         });
+        await recordTradeOrder({
+          id: session.id,
+          side: session.side,
+          asset: session.asset,
+          amountUSDT: session.amountUSDT,
+          profitUSDT: delta,
+          createdAt: session.createdAt,
+        });
         sessionRef.current = null;
         savePersistedTradeSession(tradeSessionStorageKey, null);
 
@@ -1169,6 +1215,14 @@ export default function TradePanel() {
         profitUSDT: delta,
         createdAt: current.createdAt,
         updatedAt: Date.now(),
+      });
+      await recordTradeOrder({
+        id: current.id,
+        side: current.side,
+        asset: current.asset,
+        amountUSDT: current.amountUSDT,
+        profitUSDT: delta,
+        createdAt: current.createdAt,
       });
       setResultModal((prev) =>
         prev && prev.id === current.id
@@ -1527,24 +1581,27 @@ export default function TradePanel() {
         </div>
       ) : null}
 
-      {sessionPhase === "ANALYZING" ? (
-        <div className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-4">
-          <div className="w-full max-w-md rounded-[26px] border border-sky-200/90 bg-[radial-gradient(circle_at_top,rgba(96,165,250,.16),transparent_55%),linear-gradient(180deg,rgba(255,255,255,.97),rgba(239,246,255,.95))] p-5 shadow-[0_24px_60px_rgba(15,23,42,.22)]">
-            <div className="text-sm text-sky-700/70">AI powered Trade Session</div>
-            <div
-              className={[
-                "mt-3 text-lg font-semibold text-slate-900 transition-opacity duration-400",
-                analysisVisible ? "opacity-100" : "opacity-10",
-              ].join(" ")}
-            >
-              {ANALYSIS_TEXTS[analysisIdx]}
-            </div>
-            <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-sky-100">
-              <div className="h-full w-full animate-pulse bg-gradient-to-r from-blue-500 via-cyan-400 to-sky-300" />
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {sessionPhase === "ANALYZING" && typeof document !== "undefined"
+        ? createPortal(
+            <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[80] flex justify-center px-4">
+              <div className="w-full max-w-md rounded-[26px] border border-sky-200/90 bg-[radial-gradient(circle_at_top,rgba(96,165,250,.16),transparent_55%),linear-gradient(180deg,rgba(255,255,255,.97),rgba(239,246,255,.95))] p-5 shadow-[0_24px_60px_rgba(15,23,42,.22)]">
+                <div className="text-sm text-sky-700/70">AI powered Trade Session</div>
+                <div
+                  className={[
+                    "mt-3 text-lg font-semibold text-slate-900 transition-opacity duration-400",
+                    analysisVisible ? "opacity-100" : "opacity-10",
+                  ].join(" ")}
+                >
+                  {ANALYSIS_TEXTS[analysisIdx]}
+                </div>
+                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-sky-100">
+                  <div className="h-full w-full animate-pulse bg-gradient-to-r from-blue-500 via-cyan-400 to-sky-300" />
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 }

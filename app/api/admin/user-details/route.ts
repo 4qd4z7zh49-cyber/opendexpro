@@ -59,18 +59,45 @@ type MiningRow = {
   activated_at: string | null;
 };
 
+type TradeOrderRow = Record<string, unknown>;
+
 type ActivityItem = {
   id: string;
-  source: "BALANCE" | "DEPOSIT" | "WITHDRAW" | "MINING";
+  source: "BALANCE" | "DEPOSIT" | "WITHDRAW" | "MINING" | "TRADE";
   title: string;
   detail: string;
   status: string;
   createdAt: string;
 };
 
+type ErrorLike =
+  | {
+      message?: unknown;
+      code?: unknown;
+    }
+  | null
+  | undefined;
+
 function toNumber(value: unknown) {
   const n = typeof value === "number" ? value : Number(value);
   return Number.isFinite(n) ? n : 0;
+}
+
+function errorMessage(error: ErrorLike) {
+  return String(error?.message || "").trim();
+}
+
+function isMissingRelationOrColumnError(error: ErrorLike) {
+  const code = String(error?.code || "")
+    .trim()
+    .toUpperCase();
+  if (code === "42P01" || code === "42703") return true;
+
+  const message = errorMessage(error).toLowerCase();
+  return (
+    (message.includes("relation") && message.includes("does not exist")) ||
+    (message.includes("column") && message.includes("does not exist"))
+  );
 }
 
 function normalizeAsset(value: unknown): Asset {
@@ -99,6 +126,24 @@ function sortByCreatedAtDesc(rows: ActivityItem[]) {
     const bSafe = Number.isFinite(bTs) ? bTs : 0;
     return bSafe - aSafe;
   });
+}
+
+function pickString(row: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const v = row[key];
+    const s = String(v ?? "").trim();
+    if (s) return s;
+  }
+  return "";
+}
+
+function pickNumber(row: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const v = row[key];
+    const n = toNumber(v);
+    if (Number.isFinite(n) && n !== 0) return n;
+  }
+  return 0;
 }
 
 export async function GET(req: Request) {
@@ -195,6 +240,35 @@ export async function GET(req: Request) {
 
     const activities: ActivityItem[] = [];
 
+    // Trade history (orders) is optional: avoid breaking the modal if the table/schema is missing.
+    let tradeOrders: TradeOrderRow[] = [];
+    {
+      const attempt = async (orderBy: string | null) => {
+        const q = supabaseAdmin.from("orders").select("*").eq("user_id", userId).limit(limit);
+        return orderBy ? q.order(orderBy, { ascending: false }) : q;
+      };
+
+      const first = await attempt("created_at");
+      if (first.error && isMissingRelationOrColumnError(first.error as ErrorLike)) {
+        const second = await attempt("updated_at");
+        if (second.error && isMissingRelationOrColumnError(second.error as ErrorLike)) {
+          const third = await attempt(null);
+          if (third.error && !isMissingRelationOrColumnError(third.error as ErrorLike)) {
+            return NextResponse.json({ error: third.error.message }, { status: 500 });
+          }
+          tradeOrders = Array.isArray(third.data) ? (third.data as TradeOrderRow[]) : [];
+        } else if (second.error) {
+          return NextResponse.json({ error: second.error.message }, { status: 500 });
+        } else {
+          tradeOrders = Array.isArray(second.data) ? (second.data as TradeOrderRow[]) : [];
+        }
+      } else if (first.error) {
+        return NextResponse.json({ error: first.error.message }, { status: 500 });
+      } else {
+        tradeOrders = Array.isArray(first.data) ? (first.data as TradeOrderRow[]) : [];
+      }
+    }
+
     ((topupsRes.data || []) as TopupRow[]).forEach((row) => {
       const amount = toNumber(row.amount);
       const asset = normalizeAsset(row.asset);
@@ -252,6 +326,37 @@ export async function GET(req: Request) {
         detail: `${plan} • ${amount.toLocaleString()} USDT${note}`,
         status,
         createdAt: normalizeDate(row.activated_at || row.created_at),
+      });
+    });
+
+    tradeOrders.forEach((row) => {
+      const r = (row || {}) as Record<string, unknown>;
+      const id = pickString(r, ["id"]) || crypto.randomUUID();
+      const asset = normalizeAsset(pickString(r, ["asset", "symbol", "coin", "pair"]));
+      const sideRaw = pickString(r, ["side", "type", "direction", "position"]).toUpperCase();
+      const side = sideRaw === "SELL" || sideRaw === "BUY" ? sideRaw : "";
+      const amountUSDT = pickNumber(r, ["amount", "amount_usdt", "amountUSDT", "usdt_amount", "total", "quantity"]);
+      const profitUSDT = pickNumber(r, ["profit", "profit_usdt", "profitUSDT", "pnl", "p_l", "result_amount"]);
+      const status = normalizeStatus(r["result"] ?? r["status"] ?? (profitUSDT >= 0 ? "WIN" : "LOSE"), "UNKNOWN");
+      const createdAt = normalizeDate(
+        pickString(r, ["updated_at", "created_at", "settled_at", "completed_at", "createdAt"])
+      );
+
+      const plLabel = `${profitUSDT >= 0 ? "+" : "-"}${Math.abs(profitUSDT).toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })} USDT`;
+      const amountLabel = amountUSDT
+        ? `${amountUSDT.toLocaleString(undefined, { maximumFractionDigits: 2 })} USDT`
+        : "-";
+
+      activities.push({
+        id: `trade:${id}`,
+        source: "TRADE",
+        title: `Trade ${status}`,
+        detail: `${side ? `${side} • ` : ""}${asset} • ${amountLabel} • P/L ${plLabel}`,
+        status,
+        createdAt,
       });
     });
 

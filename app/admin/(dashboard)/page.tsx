@@ -180,7 +180,7 @@ type UserDetailRow = {
 
 type UserDetailActivity = {
   id: string;
-  source: "BALANCE" | "DEPOSIT" | "WITHDRAW" | "MINING";
+  source: "BALANCE" | "DEPOSIT" | "WITHDRAW" | "MINING" | "TRADE";
   title: string;
   detail: string;
   status: string;
@@ -292,6 +292,7 @@ const DETAIL_ACTIVITY_FILTER_OPTIONS: Array<{ value: DetailActivityFilter; label
   { value: "DEPOSIT", label: "Deposit" },
   { value: "WITHDRAW", label: "Withdraw" },
   { value: "MINING", label: "Mining" },
+  { value: "TRADE", label: "Trade" },
 ];
 
 function detailFilterLabel(value: DetailActivityFilter, lang: "en" | "zh") {
@@ -300,14 +301,16 @@ function detailFilterLabel(value: DetailActivityFilter, lang: "en" | "zh") {
     if (value === "BALANCE") return "余额";
     if (value === "DEPOSIT") return "充值";
     if (value === "WITHDRAW") return "提现";
-    return "挖矿";
+    if (value === "MINING") return "挖矿";
+    return "交易";
   }
 
   if (value === "ALL") return "All";
   if (value === "BALANCE") return "Balance";
   if (value === "DEPOSIT") return "Deposit";
   if (value === "WITHDRAW") return "Withdraw";
-  return "Mining";
+  if (value === "MINING") return "Mining";
+  return "Trade";
 }
 
 function normalizePermissionMode(v: unknown): TradePermissionMode {
@@ -346,18 +349,35 @@ function permissionSessionLabel(mode: TradePermissionMode, lang: "en" | "zh" = "
   return "BUY+SELL loss";
 }
 
-function activityStatusClass(status: string) {
+function activityStatusClass(status: string, theme: "dark" | "light") {
   const s = status.trim().toUpperCase();
+  const isLight = theme === "light";
+  if (s === "WIN" || s === "PROFIT" || s === "SUCCESS") {
+    return isLight
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : "border-emerald-300/30 bg-emerald-500/10 text-emerald-200";
+  }
+  if (s === "LOSE" || s === "LOSS" || s === "FAILED" || s === "FAIL") {
+    return isLight
+      ? "border-rose-200 bg-rose-50 text-rose-700"
+      : "border-rose-300/30 bg-rose-500/10 text-rose-200";
+  }
   if (s === "ACTIVE" || s === "CONFIRMED" || s === "DONE" || s === "COMPLETED") {
-    return "border-emerald-300/30 bg-emerald-500/10 text-emerald-200";
+    return isLight
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : "border-emerald-300/30 bg-emerald-500/10 text-emerald-200";
   }
   if (s === "PENDING") {
-    return "border-yellow-300/30 bg-yellow-500/10 text-yellow-200";
+    return isLight
+      ? "border-amber-200 bg-amber-50 text-amber-800"
+      : "border-yellow-300/30 bg-yellow-500/10 text-yellow-200";
   }
   if (s === "REJECTED" || s === "DECLINED" || s === "ABORTED" || s === "FROZEN") {
-    return "border-rose-300/30 bg-rose-500/10 text-rose-200";
+    return isLight
+      ? "border-rose-200 bg-rose-50 text-rose-700"
+      : "border-rose-300/30 bg-rose-500/10 text-rose-200";
   }
-  return "border-white/20 bg-white/5 text-white/70";
+  return isLight ? "border-slate-200 bg-white text-slate-700" : "border-white/20 bg-white/5 text-white/70";
 }
 
 function AdminPageInner() {
@@ -365,6 +385,7 @@ function AdminPageInner() {
   const tab = (sp.get("tab") || "overview").toLowerCase();
   const managedBy = String(sp.get("managedBy") || "ALL").trim() || "ALL";
   const lang = sp.get("lang") === "zh" ? "zh" : "en";
+  const theme = sp.get("theme") === "light" ? "light" : "dark";
   const isZh = lang === "zh";
   const copy = useMemo(
     () => ({
@@ -1580,8 +1601,13 @@ function AdminPageInner() {
   };
 
   const detailModal = detailOpen ? (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4">
-      <div className="w-full max-w-3xl rounded-2xl border border-white/10 bg-[#0b0b0b] p-5">
+    <div
+      className={[
+        "fixed inset-0 z-50 grid place-items-center p-4",
+        theme === "light" ? "bg-slate-900/15 backdrop-blur-sm" : "bg-black/60",
+      ].join(" ")}
+    >
+      <div className="w-full max-w-3xl rounded-2xl admin-glass-panel p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-lg font-semibold">{copy.userDetails}</div>
@@ -1593,7 +1619,7 @@ function AdminPageInner() {
             type="button"
             onClick={closeDetail}
             disabled={deleteUserSavingId === detailUser?.id}
-            className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs hover:bg-white/10 disabled:opacity-60"
+            className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold hover:bg-white/10 disabled:opacity-60"
           >
             {copy.close}
           </button>
@@ -1602,7 +1628,7 @@ function AdminPageInner() {
         {detailErr ? <div className="mt-3 text-sm text-red-300">{detailErr}</div> : null}
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <div className="rounded-xl border border-white/10 bg-black/25 p-3 text-sm">
+          <div className="rounded-xl admin-glass-soft p-3 text-sm">
             <div className="text-xs uppercase tracking-wide text-white/45">{copy.profile}</div>
             <div className="mt-2 flex justify-between gap-3">
               <span className="text-white/60">{copy.username}</span>
@@ -1632,30 +1658,30 @@ function AdminPageInner() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-white/10 bg-black/25 p-3 text-sm">
+          <div className="rounded-xl admin-glass-soft p-3 text-sm">
             <div className="text-xs uppercase tracking-wide text-white/45">{copy.balanceAccess}</div>
             <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-lg border border-white/10 px-2 py-1.5">
+              <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5">
                 <div className="text-white/50">USDT</div>
                 <div className="mt-1 text-white">{fmtAsset(detailUser?.balances?.usdt, "USDT")}</div>
               </div>
-              <div className="rounded-lg border border-white/10 px-2 py-1.5">
+              <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5">
                 <div className="text-white/50">BTC</div>
                 <div className="mt-1 text-white">{fmtAsset(detailUser?.balances?.btc, "BTC")}</div>
               </div>
-              <div className="rounded-lg border border-white/10 px-2 py-1.5">
+              <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5">
                 <div className="text-white/50">ETH</div>
                 <div className="mt-1 text-white">{fmtAsset(detailUser?.balances?.eth, "ETH")}</div>
               </div>
-              <div className="rounded-lg border border-white/10 px-2 py-1.5">
+              <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5">
                 <div className="text-white/50">SOL</div>
                 <div className="mt-1 text-white">{fmtAsset(detailUser?.balances?.sol, "SOL")}</div>
               </div>
-              <div className="rounded-lg border border-white/10 px-2 py-1.5">
+              <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5">
                 <div className="text-white/50">XRP</div>
                 <div className="mt-1 text-white">{fmtAsset(detailUser?.balances?.xrp, "XRP")}</div>
               </div>
-              <div className="rounded-lg border border-white/10 px-2 py-1.5">
+              <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5">
                 <div className="text-white/50">{copy.access}</div>
                 <div className="mt-1 text-white">
                   {detailUser?.access?.restricted ? copy.restricted : copy.active}
@@ -1665,11 +1691,20 @@ function AdminPageInner() {
           </div>
         </div>
 
-        <div className="mt-4 rounded-xl border border-rose-400/25 bg-rose-500/10 p-3">
+        <div
+          className={[
+            "mt-4 rounded-xl border p-3",
+            theme === "light"
+              ? "border-rose-200 bg-rose-50"
+              : "border-rose-400/25 bg-rose-500/10",
+          ].join(" ")}
+        >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="text-sm font-semibold text-rose-200">{copy.dangerZone}</div>
-              <div className="mt-1 text-xs text-rose-100/80">
+              <div className={theme === "light" ? "text-sm font-semibold text-rose-700" : "text-sm font-semibold text-rose-200"}>
+                {copy.dangerZone}
+              </div>
+              <div className={theme === "light" ? "mt-1 text-xs text-rose-600/90" : "mt-1 text-xs text-rose-100/80"}>
                 {copy.dangerZoneDesc}
               </div>
             </div>
@@ -1685,7 +1720,7 @@ function AdminPageInner() {
           {deleteUserErr ? <div className="mt-2 text-xs text-rose-200">{deleteUserErr}</div> : null}
         </div>
 
-        <div className="mt-4 rounded-xl border border-white/10 bg-black/25 p-3">
+        <div className="mt-4 rounded-xl admin-glass-soft p-3">
           <div className="flex items-center justify-between gap-3">
             <div className="text-sm font-semibold">{copy.recentActivities}</div>
             {detailLoading ? <div className="text-xs text-white/55">{copy.loading}</div> : null}
@@ -1702,7 +1737,9 @@ function AdminPageInner() {
                   className={
                     "rounded-full border px-2.5 py-1 text-[11px] font-semibold " +
                     (active
-                      ? "border-blue-400/40 bg-blue-500/20 text-blue-200"
+                      ? theme === "light"
+                        ? "border-blue-200 bg-blue-50 text-blue-700"
+                        : "border-blue-400/40 bg-blue-500/20 text-blue-200"
                       : "border-white/15 bg-white/5 text-white/70 hover:bg-white/10")
                   }
                 >
@@ -1728,11 +1765,11 @@ function AdminPageInner() {
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="font-semibold text-white">{item.title}</div>
-                      <div className="inline-flex items-center gap-2">
+                  <div className="inline-flex items-center gap-2">
                         <span
                           className={
                             "rounded-full border px-2 py-0.5 text-[10px] font-semibold " +
-                            activityStatusClass(item.status)
+                            activityStatusClass(item.status, theme)
                           }
                         >
                           {item.status}
