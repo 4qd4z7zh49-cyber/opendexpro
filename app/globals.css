@@ -3,6 +3,11 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --motion-fast: 180ms;
+  --motion-base: 280ms;
+  --motion-slow: 520ms;
+  --motion-soft: cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-spring: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @theme inline {
@@ -28,10 +33,61 @@ body {
   overflow-x: hidden;
 }
 
+html {
+  scroll-behavior: smooth;
+  background: #eef6ff;
+}
+
 body {
+  min-height: 100dvh;
   background: var(--background);
   color: var(--foreground);
   font-family: "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  transition:
+    background-color var(--motion-slow) var(--motion-soft),
+    color var(--motion-base) var(--motion-soft);
+}
+
+.platform-root {
+  overscroll-behavior-y: none;
+}
+
+.platform-frontend :where(a[class], button, [role="button"]),
+.marketing-shell :where(a[class], button, [role="button"]) {
+  transition:
+    transform var(--motion-fast) var(--motion-spring),
+    background-color var(--motion-fast) var(--motion-soft),
+    color var(--motion-fast) var(--motion-soft),
+    border-color var(--motion-fast) var(--motion-soft),
+    box-shadow var(--motion-base) var(--motion-soft),
+    opacity var(--motion-fast) var(--motion-soft),
+    filter var(--motion-base) var(--motion-soft);
+  will-change: transform;
+}
+
+.platform-frontend :where(a[class], button, [role="button"]):hover,
+.marketing-shell :where(a[class], button, [role="button"]):hover {
+  transform: translateY(-1px);
+}
+
+.platform-frontend :where(a[class], button, [role="button"]):active,
+.marketing-shell :where(a[class], button, [role="button"]):active {
+  transform: translateY(0) scale(0.985);
+}
+
+.platform-frontend :where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea),
+.marketing-shell :where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea) {
+  transition:
+    transform var(--motion-fast) var(--motion-spring),
+    background-color var(--motion-fast) var(--motion-soft),
+    border-color var(--motion-fast) var(--motion-soft),
+    box-shadow var(--motion-base) var(--motion-soft),
+    color var(--motion-fast) var(--motion-soft);
+}
+
+.platform-frontend :where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea):focus,
+.marketing-shell :where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea):focus {
+  transform: translateY(-1px);
 }
 
 /* ===== Frontend Frosted Glass System ===== */
@@ -44,6 +100,9 @@ body {
     radial-gradient(1200px 620px at -12% -16%, rgba(96, 165, 250, 0.48), transparent 55%),
     radial-gradient(960px 560px at 112% -8%, rgba(56, 189, 248, 0.24), transparent 54%),
     linear-gradient(180deg, #f9fcff 0%, #eef6ff 44%, #e6f0ff 100%);
+  transition:
+    background 800ms var(--motion-soft),
+    color var(--motion-base) var(--motion-soft);
 }
 
 .platform-frontend__aurora {
@@ -55,11 +114,127 @@ body {
     radial-gradient(640px 320px at 16% 12%, rgba(255, 255, 255, 0.72), transparent 70%),
     radial-gradient(720px 420px at 84% 0%, rgba(191, 219, 254, 0.6), transparent 72%),
     radial-gradient(520px 280px at 50% 100%, rgba(125, 211, 252, 0.2), transparent 76%);
+  animation: auroraDrift 18s ease-in-out infinite alternate;
+  will-change: transform, opacity;
 }
 
 .platform-frontend__main {
   position: relative;
   z-index: 1;
+}
+
+.platform-frontend__main > *,
+.marketing-shell__content > * {
+  animation: pageSurfaceIn 420ms var(--motion-spring) both;
+}
+
+.platform-frontend__main > * > *,
+.marketing-shell__content > * > * {
+  animation: pageSectionIn 520ms var(--motion-spring) both;
+}
+
+.platform-frontend__main > * > *:nth-child(2),
+.marketing-shell__content > * > *:nth-child(2) {
+  animation-delay: 40ms;
+}
+
+.platform-frontend__main > * > *:nth-child(3),
+.marketing-shell__content > * > *:nth-child(3) {
+  animation-delay: 80ms;
+}
+
+.marketing-shell {
+  position: relative;
+  isolation: isolate;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  color: #ffffff;
+  background:
+    radial-gradient(980px 620px at 18% 8%, rgba(34, 197, 94, 0.11), transparent 62%),
+    radial-gradient(840px 520px at 86% 0%, rgba(59, 130, 246, 0.2), transparent 56%),
+    linear-gradient(180deg, #07111f 0%, #0a1323 48%, #0d1627 100%);
+  transition:
+    background 800ms var(--motion-soft),
+    color var(--motion-base) var(--motion-soft);
+}
+
+.marketing-shell__aurora {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(520px 280px at 14% 12%, rgba(125, 211, 252, 0.16), transparent 72%),
+    radial-gradient(620px 360px at 88% 10%, rgba(96, 165, 250, 0.18), transparent 70%),
+    radial-gradient(540px 320px at 50% 100%, rgba(59, 130, 246, 0.12), transparent 76%);
+  animation: auroraDrift 20s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+.marketing-shell__content {
+  position: relative;
+  z-index: 1;
+  min-height: 100dvh;
+}
+
+@keyframes auroraDrift {
+  0% {
+    opacity: 0.8;
+    transform: translate3d(-1.5%, 0, 0) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate3d(1%, -1.5%, 0) scale(1.04);
+  }
+  100% {
+    opacity: 0.9;
+    transform: translate3d(0.5%, 1.5%, 0) scale(1.07);
+  }
+}
+
+@keyframes pageSurfaceIn {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes pageSectionIn {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .platform-frontend__main > *,
+  .marketing-shell__content > *,
+  .platform-frontend__main > * > *,
+  .marketing-shell__content > * > * ,
+  .platform-frontend__aurora,
+  .marketing-shell__aurora {
+    animation: none !important;
+  }
+
+  .platform-frontend :where(a[class], button, [role="button"]),
+  .marketing-shell :where(a[class], button, [role="button"]),
+  .platform-frontend :where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea),
+  .marketing-shell :where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea) {
+    transition-duration: 0.01ms !important;
+    transform: none !important;
+  }
 }
 
 .platform-frontend :where(h1, h2, h3, h4, strong, b) {

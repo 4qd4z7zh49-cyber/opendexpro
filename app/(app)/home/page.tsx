@@ -11,27 +11,12 @@ import VipProgramModal from "@components/VipProgramModal";
 
 type HomeTheme = "dark" | "light";
 
-const THEME_KEY = "opendex.home.theme.v2";
-
 export default function HomePage() {
   const pathname = usePathname();
-  const [theme, setTheme] = useState<HomeTheme>(() => {
-    if (typeof window === "undefined") return "light";
-    try {
-      const saved = localStorage.getItem(THEME_KEY);
-      return saved === "light" || saved === "dark" ? saved : "light";
-    } catch {
-      return "light";
-    }
-  });
   const [vipPromoOpen, setVipPromoOpen] = useState(false);
+  const theme: HomeTheme = "light";
 
   useEffect(() => {
-    try {
-      localStorage.setItem(THEME_KEY, theme);
-    } catch {
-      // ignore localStorage write errors
-    }
     document.documentElement.setAttribute("data-ob-theme", theme);
   }, [theme]);
 
@@ -47,10 +32,7 @@ export default function HomePage() {
   return (
     <div className={`homeWrap ${theme === "light" ? "homeThemeLight" : "homeThemeDark"}`}>
       <VipProgramModal open={vipPromoOpen} theme={theme} onClose={() => setVipPromoOpen(false)} />
-      <HomeBanner
-        theme={theme}
-        onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
-      />
+      <HomeBanner theme={theme} />
       <TradingViewTape theme={theme} />
       <FeatureGrid onVipBenefitsClick={() => setVipPromoOpen(true)} />
       <HomeNewsSection />

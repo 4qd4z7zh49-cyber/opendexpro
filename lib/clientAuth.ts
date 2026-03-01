@@ -4,6 +4,11 @@ import { supabase } from "@/lib/supabaseClient";
 
 const AUTH_STORAGE_KEY = "opendex.auth.session";
 
+type RefreshSessionResponse = {
+  access_token?: unknown;
+  refresh_token?: unknown;
+};
+
 function normalizeClientAuthError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error ?? "");
   const lower = message.toLowerCase();
@@ -50,6 +55,77 @@ async function clearBrokenClientSession() {
   } catch {
     // ignore sign-out cleanup errors
   }
+}
+
+function getSupabaseClientEnv() {
+  const url = String(process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim().replace(/\/+$/, "");
+  const anonKey = String(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim();
+  if (!url) {
+    throw new Error("Missing env: NEXT_PUBLIC_SUPABASE_URL");
+  }
+  if (!anonKey) {
+    throw new Error("Missing env: NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  }
+  return { url, anonKey };
+}
+
+async function refreshAccessToken(stored: StoredSession) {
+  if (!stored.refreshToken) {
+    await clearBrokenClientSession();
+    return "";
+  }
+
+  const { url, anonKey } = getSupabaseClientEnv();
+  const response = await fetch(`${url}/auth/v1/token?grant_type=refresh_token`, {
+    method: "POST",
+    headers: {
+      apikey: anonKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      refresh_token: stored.refreshToken,
+    }),
+  });
+
+  const payload = (await response.json().catch(() => ({}))) as RefreshSessionResponse & {
+    error?: unknown;
+    error_description?: unknown;
+    msg?: unknown;
+  };
+
+  if (!response.ok) {
+    const message = String(
+      payload.error_description || payload.msg || payload.error || "Failed to refresh session"
+    );
+    if (recoverableAuthError(message)) {
+      await clearBrokenClientSession();
+      return "";
+    }
+    throw new Error(message);
+  }
+
+  const accessToken = String(payload.access_token || "").trim();
+  const refreshToken = String(payload.refresh_token || stored.refreshToken || "").trim();
+
+  if (!accessToken || !refreshToken) {
+    await clearBrokenClientSession();
+    return "";
+  }
+
+  const { error } = await supabase.auth.setSession({
+    access_token: accessToken,
+    refresh_token: refreshToken,
+  });
+
+  if (error) {
+    if (recoverableAuthError(error.message)) {
+      await clearBrokenClientSession();
+      return "";
+    }
+    throw error;
+  }
+
+  return accessToken;
 }
 
 function readStoredSession(): StoredSession | null {
@@ -108,16 +184,7 @@ export async function getUserAccessToken() {
       return stored.accessToken;
     }
 
-    const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
-    if (sessionErr) {
-      if (recoverableAuthError(sessionErr.message)) {
-        await clearBrokenClientSession();
-        return "";
-      }
-      throw sessionErr;
-    }
-
-    return sessionData.session?.access_token || "";
+    return refreshAccessToken(stored);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error ?? "");
     if (recoverableAuthError(message)) {

@@ -30,7 +30,7 @@ export function getSupabaseClient() {
   _client = createClient(env.url, env.key, {
     auth: {
       persistSession: true,
-      autoRefreshToken: true,
+      autoRefreshToken: false,
       detectSessionInUrl: true,
       storageKey: "opendex.auth.session",
     },

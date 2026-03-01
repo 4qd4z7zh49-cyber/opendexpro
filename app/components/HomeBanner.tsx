@@ -263,10 +263,8 @@ function VipBadge({ level }: { level: number }) {
 
 export default function HomeBanner({
   theme,
-  onToggleTheme,
 }: {
   theme: Theme;
-  onToggleTheme: () => void;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -603,31 +601,6 @@ export default function HomeBanner({
           </button>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onToggleTheme}
-              className="hbIconBtn"
-              aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {theme === "dark" ? (
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              ) : (
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.8" />
-                  <path d="M12 2.5v2.2M12 19.3v2.2M21.5 12h-2.2M4.7 12H2.5M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6M18.7 18.7l-1.6-1.6M6.9 6.9 5.3 5.3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                </svg>
-              )}
-            </button>
-
             <div className="relative">
               <button
                 className="hbIconBtn hbBell"

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { MINING_PLANS, type MiningPlan } from "@/lib/miningMock";
 
 import MiningSummary from "./components/MiningSummary";
@@ -36,6 +37,13 @@ function statusLabel(status: MiningOrder["status"]) {
   return status === "COMPLETED" ? "SUCCESS" : status;
 }
 
+type ToastTone = "info" | "success" | "error";
+
+type ToastState = {
+  message: string;
+  tone: ToastTone;
+};
+
 export default function MiningPage() {
   const [orders, setOrders] = useState<MiningOrder[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
@@ -44,9 +52,10 @@ export default function MiningPage() {
   const [activeModal, setActiveModal] = useState<MiningPlan | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [amount, setAmount] = useState<string>("");
-  const [toast, setToast] = useState<string>("");
+  const [toast, setToast] = useState<ToastState | null>(null);
   const [walletUSDT, setWalletUSDT] = useState(0);
   const [nowTs, setNowTs] = useState<number>(() => Date.now());
+  const [portalReady, setPortalReady] = useState(false);
 
   // summary (live/prorated logic)
   const summary = useMemo(() => {
@@ -80,7 +89,7 @@ export default function MiningPage() {
 
   const openPurchase = (plan: MiningPlan) => {
     if (miningRestricted) {
-      setToast("Your account is restricted.");
+      setToast({ message: "Your account is restricted.", tone: "error" });
       return;
     }
     setAmount("");
@@ -153,15 +162,30 @@ export default function MiningPage() {
     return () => window.clearInterval(t);
   }, []);
 
+  useEffect(() => {
+    setPortalReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timeout = window.setTimeout(() => {
+      setToast(null);
+    }, 4200);
+    return () => window.clearTimeout(timeout);
+  }, [toast]);
+
   const doPurchase = async () => {
     if (!activeModal) return;
     const n = Number(String(amount).replace(/[^\d.]/g, ""));
     if (!Number.isFinite(n) || n <= 0) {
-      setToast("Please enter a valid amount.");
+      setToast({ message: "Please enter a valid amount.", tone: "error" });
       return;
     }
     if (n < activeModal.min || n > activeModal.max) {
-      setToast(`Amount must be between ${money(activeModal.min)} and ${money(activeModal.max)}.`);
+      setToast({
+        message: `Amount must be between ${money(activeModal.min)} and ${money(activeModal.max)}.`,
+        tone: "error",
+      });
       return;
     }
 
@@ -170,26 +194,29 @@ export default function MiningPage() {
       await reloadOrders();
       await reloadWalletUSDT();
       setActiveModal(null);
-      setToast("Purchase request submitted. Waiting for admin approval.");
+      setToast({
+        message: "Purchase request submitted. Waiting for admin approval.",
+        tone: "success",
+      });
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Purchase failed";
-      setToast(message);
+      setToast({ message, tone: "error" });
     }
   };
 
   const abortOrder = async (orderId: string) => {
     if (miningRestricted) {
-      setToast("Your account is restricted.");
+      setToast({ message: "Your account is restricted.", tone: "error" });
       return;
     }
     try {
       await abortMining(orderId);
       await reloadOrders();
       await reloadWalletUSDT();
-      setToast("Order aborted ✅");
+      setToast({ message: "Order aborted.", tone: "success" });
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Abort failed";
-      setToast(message);
+      setToast({ message, tone: "error" });
     }
   };
 
@@ -210,6 +237,133 @@ export default function MiningPage() {
 
     return Math.max(0, Math.min(100, best));
   };
+
+  const toastClassName =
+    toast?.tone === "success"
+      ? "border-emerald-300/70 bg-[linear-gradient(135deg,rgba(236,253,245,0.98),rgba(209,250,229,0.94))] text-emerald-950 shadow-[0_24px_70px_rgba(16,185,129,0.24)]"
+      : toast?.tone === "error"
+        ? "border-rose-300/70 bg-[linear-gradient(135deg,rgba(255,241,242,0.98),rgba(255,228,230,0.94))] text-rose-950 shadow-[0_24px_70px_rgba(244,63,94,0.22)]"
+        : "border-sky-300/70 bg-[linear-gradient(135deg,rgba(239,246,255,0.98),rgba(219,234,254,0.94))] text-sky-950 shadow-[0_24px_70px_rgba(59,130,246,0.2)]";
+
+  const overlays =
+    portalReady && typeof document !== "undefined"
+      ? createPortal(
+          <>
+            {activeModal && (
+              <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/70 px-4 pb-[calc(88px+env(safe-area-inset-bottom))] backdrop-blur-sm sm:items-center sm:p-4">
+                <div className="w-full max-w-[520px] max-h-[min(80dvh,720px)] overflow-y-auto rounded-3xl border border-sky-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(239,246,255,0.92))] p-5 shadow-[0_28px_90px_rgba(82,132,198,0.24)] backdrop-blur-2xl">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="text-slate-950 font-semibold">{activeModal.name}</div>
+                      <div className="text-slate-500 text-xs mt-1">
+                        {activeModal.cycleDays}Days · Daily {((activeModal.dailyRate * 100).toFixed(2))}%
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setActiveModal(null)}
+                      className="rounded-xl border border-sky-200/80 bg-white/75 px-3 py-2 text-xs font-medium text-slate-700 shadow-[0_12px_26px_rgba(82,132,198,0.12)] transition hover:bg-white"
+                    >
+                      Close
+                    </button>
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="text-slate-500 text-xs">Enter amount</label>
+                    <input
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      inputMode="numeric"
+                      placeholder={`${money(activeModal.min)} - ${money(activeModal.max)}`}
+                      className="mt-2 w-full rounded-2xl border border-sky-200/80 bg-white/80 px-4 py-4 text-slate-950 placeholder:text-slate-400 outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_12px_30px_rgba(82,132,198,0.1)] focus:border-sky-300"
+                    />
+                    <div className="text-slate-500 text-xs mt-2">
+                      Single limit: {money(activeModal.min)} - {money(activeModal.max)}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={doPurchase}
+                    className="mt-5 w-full rounded-2xl bg-[linear-gradient(135deg,#60a5fa,#2563eb)] py-4 font-semibold text-white transition shadow-[0_16px_36px_rgba(37,99,235,0.28)] hover:brightness-105 active:scale-[.99]"
+                  >
+                    Confirm Purchase
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {historyOpen && (
+              <div className="fixed inset-0 z-[130] grid place-items-center bg-black/70 p-4 backdrop-blur-sm">
+                <div className="w-full max-w-[560px] overflow-hidden rounded-3xl border border-sky-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(239,246,255,0.92))] shadow-[0_24px_80px_rgba(82,132,198,0.24)] backdrop-blur-2xl">
+                  <div className="flex items-center justify-between border-b border-sky-200/70 px-5 py-4">
+                    <div>
+                      <div className="text-lg font-semibold text-slate-950">Orders History</div>
+                      <div className="text-xs text-slate-500">Mining session records</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setHistoryOpen(false)}
+                      className="rounded-xl border border-sky-200/80 bg-white/75 px-3 py-2 text-xs font-medium text-slate-700 shadow-[0_12px_26px_rgba(82,132,198,0.12)] hover:bg-white"
+                    >
+                      Close
+                    </button>
+                  </div>
+
+                  <div className="max-h-[62vh] overflow-auto p-4">
+                    {ordersLoading ? (
+                      <div className="text-sm text-slate-500">Loading orders...</div>
+                    ) : ordersErr ? (
+                      <div className="text-sm text-red-300">{ordersErr}</div>
+                    ) : orders.length === 0 ? (
+                      <div className="rounded-xl border border-sky-200/70 bg-white/75 p-3 text-sm text-slate-500 shadow-[0_12px_28px_rgba(82,132,198,0.1)]">
+                        No orders yet.
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {orders.map((o) => (
+                          <div
+                            key={`history-${o.id}`}
+                            className="rounded-xl border border-sky-200/70 bg-white/75 p-3 shadow-[0_12px_28px_rgba(82,132,198,0.1)]"
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="text-sm text-slate-900">{o.planName}</div>
+                              <div className={`text-xs font-semibold ${statusClass(o.status)}`}>
+                                {statusLabel(o.status)}
+                              </div>
+                            </div>
+                            <div className="mt-1 text-xs text-slate-500">
+                              Amount: <span className="text-slate-700">{money(o.principalUSDT)} USDT</span>
+                            </div>
+                            <div className="mt-1 text-xs text-slate-400">
+                              Created: {o.createdAt ? new Date(o.createdAt).toLocaleString() : "-"}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {toast && (
+              <div className="fixed bottom-[calc(92px+env(safe-area-inset-bottom))] left-1/2 z-[140] w-[min(calc(100vw-2rem),28rem)] -translate-x-1/2">
+                <div className={`rounded-2xl border px-4 py-3 text-sm font-medium ${toastClassName}`}>
+                  <div className="flex items-start gap-3">
+                    <div className="min-w-0 flex-1">{toast.message}</div>
+                    <button
+                      className="shrink-0 text-current/60 transition hover:text-current"
+                      onClick={() => setToast(null)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>,
+          document.body
+        )
+      : null;
 
   return (
     <div className="min-h-[calc(100vh-72px)] px-4 pt-5 pb-28 bg-black">
@@ -359,115 +513,7 @@ export default function MiningPage() {
           </div>
         </section>
       </div>
-
-      {/* Purchase modal */}
-      {activeModal && (
-        <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 backdrop-blur-sm">
-          <div className="w-full max-w-[520px] rounded-t-3xl border border-white/10 bg-[#0b0b0d] p-5 shadow-[0_-18px_70px_rgba(0,0,0,.75)]">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div className="text-white font-semibold">{activeModal.name}</div>
-                <div className="text-white/60 text-xs mt-1">
-                  {activeModal.cycleDays}Days · Daily {((activeModal.dailyRate * 100).toFixed(2))}%
-                </div>
-              </div>
-              <button
-                onClick={() => setActiveModal(null)}
-                className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-white/90 hover:bg-white/[0.07] transition"
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="mt-4">
-              <label className="text-white/60 text-xs">Enter amount</label>
-              <input
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                inputMode="numeric"
-                placeholder={`${money(activeModal.min)} - ${money(activeModal.max)}`}
-                className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-4 text-white placeholder:text-white/30 outline-none focus:border-white/20"
-              />
-              <div className="text-white/50 text-xs mt-2">
-                Single limit: {money(activeModal.min)} - {money(activeModal.max)}
-              </div>
-            </div>
-
-            <button
-              onClick={doPurchase}
-              className="mt-5 w-full rounded-2xl py-4 font-semibold text-black bg-[#F7B500] hover:brightness-110 active:scale-[.99] transition shadow-[0_12px_26px_rgba(247,181,0,.25)]"
-            >
-              Confirm Purchase
-            </button>
-          </div>
-        </div>
-      )}
-
-      {historyOpen && (
-        <div className="fixed inset-0 z-[90] grid place-items-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-[560px] overflow-hidden rounded-3xl border border-white/10 bg-[#0b0b0d] shadow-[0_24px_80px_rgba(0,0,0,.7)]">
-            <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-              <div>
-                <div className="text-lg font-semibold text-white">Orders History</div>
-                <div className="text-xs text-white/60">Mining session records</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setHistoryOpen(false)}
-                className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-white/90 hover:bg-white/[0.07]"
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="max-h-[62vh] overflow-auto p-4">
-              {ordersLoading ? (
-                <div className="text-sm text-white/60">Loading orders...</div>
-              ) : ordersErr ? (
-                <div className="text-sm text-red-300">{ordersErr}</div>
-              ) : orders.length === 0 ? (
-                <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-sm text-white/60">
-                  No orders yet.
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {orders.map((o) => (
-                    <div key={`history-${o.id}`} className="rounded-xl border border-white/10 bg-black/30 p-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="text-sm text-white">{o.planName}</div>
-                        <div className={`text-xs font-semibold ${statusClass(o.status)}`}>
-                          {statusLabel(o.status)}
-                        </div>
-                      </div>
-                      <div className="mt-1 text-xs text-white/60">
-                        Amount: <span className="text-white/80">{money(o.principalUSDT)} USDT</span>
-                      </div>
-                      <div className="mt-1 text-xs text-white/50">
-                        Created: {o.createdAt ? new Date(o.createdAt).toLocaleString() : "-"}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* tiny toast */}
-      {!!toast && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[80]">
-          <div className="rounded-2xl border border-white/10 bg-black/80 px-4 py-3 text-white/90 text-sm shadow-[0_18px_55px_rgba(0,0,0,.6)]">
-            {toast}
-            <button
-              className="ml-3 text-white/60 hover:text-white/90"
-              onClick={() => setToast("")}
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
+      {overlays}
     </div>
   );
 }
